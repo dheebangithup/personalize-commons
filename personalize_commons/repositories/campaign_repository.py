@@ -6,9 +6,9 @@ from typing import Optional, List, Dict, Any
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
-from shared_lib.constants.app_constants import AppConstants
-from shared_lib.constants.db_constants import STAUS_AT_INDEX, UPDATED_AT_INDEX
-from shared_lib.entity.campaign_entity import CampaignEntity
+from personalize_commons.constants.app_constants import AppConstants
+from personalize_commons.constants.db_constants import STAUS_AT_INDEX, UPDATED_AT_INDEX
+from personalize_commons.entity.campaign_entity import CampaignEntity
 
 logger = logging.getLogger(__name__)
 
