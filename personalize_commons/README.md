@@ -1,1 +1,0 @@
-this is commom lib for entire personalize app
