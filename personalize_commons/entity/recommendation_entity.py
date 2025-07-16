@@ -110,17 +110,24 @@ class RecommendationEntity(BaseModel):
         return cls(**item)
 
     @staticmethod
-    def of(campaign: CampaignEntity,status=RecommendationStatus.RUNNING,flows=list.append(Flow.RECOMMENDATION_TRIGGERED)) -> 'RecommendationEntity':
+    def of(campaign: CampaignEntity, status=RecommendationStatus.RUNNING, flows=None) -> 'RecommendationEntity':
         """
         Create a RecommendationEntity object from a CampaignEntity object.
+
+        Args:
+            campaign: The campaign entity to create recommendation from
+            status: Status of the recommendation (default: RUNNING)
+            flows: List of flows for the recommendation (default: [Flow.RECOMMENDATION_TRIGGERED])
         """
+        if flows is None:
+            flows = [Flow.RECOMMENDATION_TRIGGERED]
+
         return RecommendationEntity(
             tenant_id=campaign.tenant_id,
             recommendation_id=f"recommendation_{uuid4()}",
             campaign_id=campaign.campaign_id,
-            status=RecommendationStatus.RUNNING,
+            status=status,  # Use the status parameter instead of hardcoded value
             metadata=campaign.model_dump(),
             created_at=datetime.utcnow(),
             flows=flows,
-
         )
