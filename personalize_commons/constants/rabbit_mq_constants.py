@@ -6,3 +6,7 @@ class RabbitMQConstants:
     RECOMMENDATION_START_ROUTING_KEY = 'personalize.start'
     RECOMMENDATION_DLQ_ROUTING_KEY = "recommendation.dlq"
 
+    class Payload:
+        CAMPAIGN_ID='campaign_id'
+        RECOMMENDATION_ID='recommendation_id'
+
