@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from personalize_commons.constants.app_constants import AppConstants
 
 '''
 PK :tenant_id
@@ -12,6 +13,10 @@ SK : campaign_id
 GSI: tenant_updated_at_index : PK:tenant_id, SK: updated_at
 '''
 
+class RecommendationLogic(str, Enum):
+    ITEMS_TO_USER=AppConstants.ITEMS_TO_USER
+    ITEMS_TO_ITEM=AppConstants.ITEMS_TO_ITEM
+    USERS_TO_ITEM=AppConstants.USERS_TO_ITEM
 
 class CampaignStatus(str, Enum):
     DRAFT = "DRAFT"
