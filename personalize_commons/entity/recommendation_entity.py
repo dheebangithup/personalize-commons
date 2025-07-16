@@ -21,6 +21,14 @@ class RecommendationStatus(str, Enum):
     FAILED = "FAILED"
     RECOM_DONE="RECOMMENDATION_DONE"
 
+class Flow(str, Enum):
+    RECOMMENDATION_TRIGGERED = "recommendation.triggered"
+    AI_SUCCESS = "recommendation.ai.success"
+    AI_FAILED = "recommendation.ai.failed"
+    NOTIFY_SUCCESS = "recommendation.notify.success"
+    NOTIFY_FAILED = "recommendation.notify.failed"
+
+
 
 class RecommendationMetrics(BaseModel):
     ai_recommended_items: int = Field(..., description="Number of items recommended",alias="ai_recommended_items")
@@ -44,7 +52,7 @@ class RecommendationEntity(BaseModel):
     recommendation_id: str = Field(..., description="Unique identifier for the recommendation job (sort key)")
     campaign_id: str = Field(..., description="ID of the campaign this recommendation is for")
     status: RecommendationStatus = Field(default=RecommendationStatus.RUNNING, description="Current status of the recommendation job")
-
+    flows:[str]=Field(...,description="List of flows this recommendation job is for")
     # Recommendation results
     recom_file_key: Optional[str] = Field(None, description="s3 key of the recommendation file")
 
