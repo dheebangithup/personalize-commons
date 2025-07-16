@@ -14,7 +14,7 @@ class RabbitMqMessageBuilder:
                                      retry_count: int = 0
                                      ) -> str:
         message = {
-            event_type: str(event_type),
+            'event_type': str(event_type),
             "source": source,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "payload": payload,
