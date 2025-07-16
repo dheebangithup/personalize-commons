@@ -9,4 +9,5 @@ class RabbitMQConstants:
     class Payload:
         CAMPAIGN_ID='campaign_id'
         RECOMMENDATION_ID='recommendation_id'
+        TENANT_ID='tenant_id'
 
