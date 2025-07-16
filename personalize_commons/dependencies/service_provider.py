@@ -4,6 +4,7 @@ from personalize_commons.services.s3_service import S3Service
 from personalize_commons.services.user_service import UserService
 
 __s3_service = None
+_user_service =None
 
 
 def get_s3_service() -> S3Service:
