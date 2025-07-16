@@ -6,6 +6,8 @@ from typing import List, Dict, Any
 import boto3
 from botocore.exceptions import ClientError
 
+from personalize_commons.exception.s3_upload_exception import S3UploadException
+
 
 class S3Service:
     """Service for handling S3 operations for JSONL files."""
@@ -90,7 +92,7 @@ class S3Service:
             return s3_key
 
         except ClientError as e:
-            raise Exception(f"Failed to upload to S3: {str(e)}")
+            raise S3UploadException(f"Failed to upload to S3: {str(e)}")
 
     def download_dict(
             self,
