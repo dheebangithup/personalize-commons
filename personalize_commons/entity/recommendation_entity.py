@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-
+from personalize_commons.entity.campaign_entity import CampaignEntity
 
 '''
 PK :tenant_id
@@ -110,7 +110,7 @@ class RecommendationEntity(BaseModel):
         return cls(**item)
 
     @staticmethod
-    def of(campaign: 'CampaignEntity') -> 'RecommendationEntity':
+    def of(campaign: CampaignEntity,status=RecommendationStatus.RUNNING,flows=list.append(Flow.RECOMMENDATION_TRIGGERED)) -> 'RecommendationEntity':
         """
         Create a RecommendationEntity object from a CampaignEntity object.
         """
@@ -120,5 +120,7 @@ class RecommendationEntity(BaseModel):
             campaign_id=campaign.campaign_id,
             status=RecommendationStatus.RUNNING,
             metadata=campaign.model_dump(),
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
+            flows=flows,
+
         )
