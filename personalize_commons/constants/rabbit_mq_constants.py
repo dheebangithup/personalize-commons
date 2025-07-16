@@ -10,4 +10,9 @@ class RabbitMQConstants:
         CAMPAIGN_ID='campaign_id'
         RECOMMENDATION_ID='recommendation_id'
         TENANT_ID='tenant_id'
+        PAYLOAD='payload'
+        EVENT_TYPE='event_type'
+        SOURCE='source'
+        TIMESTAMP='timestamp'
+        RETRY_COUNT='retry_count'
 
