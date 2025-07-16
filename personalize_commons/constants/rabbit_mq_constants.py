@@ -1,9 +1,9 @@
 class RabbitMQConstants:
     RECOMMENDATION_EXCHANGE  = 'personalize'
-    DLQ_EXCHANGE = "recommendation.dlx"
+    DLQ_EXCHANGE = "recommendations.dlx"
     RECOMMENDATION_QUEUE = 'recommendations'
     RECOMMENDATION_DLQ = "recommendations.dlq"
-    RECOMMENDATION_START_ROUTING_KEY = 'personalize.start'
+    RECOMMENDATION_START_ROUTING_KEY = 'recommendation.start'
     RECOMMENDATION_DLQ_ROUTING_KEY = "recommendation.dlq"
 
     class Payload:
