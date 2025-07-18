@@ -41,6 +41,19 @@ class RecommendationMetrics(BaseModel):
     message_success_count: int = Field(..., description="Number of successfully processed messages",alias="message_success_count")
     message_failed_count: int = Field(..., description="Number of failed messages",alias="message_failed_count")
 
+    @staticmethod
+    def empty():
+        return RecommendationMetrics(
+            ai_recommended_items=0,
+            ai_recommended_users=0,
+            recommended_users=0,
+            recommended_items=0,
+            segment_matched_users=0,
+            default_users=0,
+            failed_recommendations=0,
+            message_success_count=0,
+            message_failed_count=0,
+        )
 class RecommendationEntity(BaseModel):
     """
     Entity representing a recommendation job in the system.
