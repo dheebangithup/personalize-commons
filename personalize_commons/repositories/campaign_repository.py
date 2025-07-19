@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
 from boto3.dynamodb.conditions import Key
@@ -163,6 +163,8 @@ class CampaignRepository:
             # Determine which index to use based on parameters
             index_name = None
 
+            if end_date is not None:
+                end_date=end_date+timedelta(days=1)
             # If status is provided but no date range, use StatusIndex
             if status and not (start_date or end_date):
                 index_name = STAUS_AT_INDEX
