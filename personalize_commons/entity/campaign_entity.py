@@ -21,9 +21,9 @@ class RecommendationLogic(str, Enum):
 class CampaignStatus(str, Enum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
+    STOP = "STOP"
     PAUSED = "PAUSED"
-    COMPLETED = "COMPLETED"
-    ARCHIVED = "ARCHIVED"
+
 
 class CampaignEntity(BaseModel):
 
