@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -221,6 +221,9 @@ class RecommendationRepository:
 
             # Determine which index to use based on parameters
             index_name = None
+            # This will exclude all records from July 15, unless they were created exactly at midnight (00:00:00) — which is very unlikely.
+            if end_date is not None:
+                end_date = end_date + timedelta(days=1)
 
             # If status is provided but no date range, use StatusIndex
             if status and not (start_date or end_date):
@@ -229,12 +232,7 @@ class RecommendationRepository:
                 expr_attr_names['#status'] = 'status'
                 expr_attr_values[':status'] = status
 
-                # Add date range as filter if needed
-                if start_date and end_date:
-                    filter_expression.append('#created_at BETWEEN :start_date AND :end_date')
-                    expr_attr_names['#created_at'] = 'created_at'
-                    expr_attr_values[':start_date'] = start_date.isoformat()
-                    expr_attr_values[':end_date'] = end_date.isoformat()
+
 
             # Otherwise, use CreatedAtIndex (default)
             else:
