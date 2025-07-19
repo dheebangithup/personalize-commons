@@ -21,7 +21,7 @@ class RecommendationLogic(str, Enum):
 class CampaignStatus(str, Enum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
-    STOP = "STOP"
+    STOPPED = "STOPPED"
     PAUSED = "PAUSED"
 
 
