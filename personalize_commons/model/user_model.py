@@ -6,6 +6,7 @@ from enum import Enum
 class Operator(str, Enum):
     """Supported comparison operators"""
     EQUALS = "="
+    # <> equal to != operator i PartiQl query
     NOT_EQUALS = "<>"
     LESS_THAN = "<"
     LESS_THAN_EQUAL = "<="
@@ -23,6 +24,7 @@ class ConditionValue(BaseModel):
     operator: Operator = Operator.EQUALS
     value: Any
     value2: Optional[Any] = None  # Used for BETWEEN operator
+    dtype: Optional[str] = None  # Used for BETWEEN operator
 
 
 class QueryRequest(BaseModel):

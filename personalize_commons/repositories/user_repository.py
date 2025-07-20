@@ -89,7 +89,7 @@ class UserRepository:
 
                 operator = operator.lower()
 
-                if operator in ("=", "!=", "<", "<=", ">", ">="):
+                if operator in ("=", "<>", "<", "<=", ">", ">="):
                     where_parts.append(f"{field} {operator} ?")
                     params.append(self._convert_to_dynamodb_type(value))
 
