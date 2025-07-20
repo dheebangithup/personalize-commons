@@ -56,7 +56,7 @@ class CampaignRepository:
         """
         try:
             # First get the existing campaign to merge with updates
-            existing = self.get_campaign(campaign_id)
+            existing = self.get_campaign(campaign_id,tenant_id)
             if not existing:
                 return None
 
