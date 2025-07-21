@@ -16,7 +16,7 @@ def to_ist_iso(utc_iso: str) -> str:
     dt = datetime.fromisoformat(utc_iso).replace(tzinfo=UTC)
     return dt.astimezone(IST).isoformat()
 
-# ist to utc iso
+# ist_utc to utc_iso
 def ist_to_utc_iso(ist_iso: str) -> str:
     dt = datetime.fromisoformat(ist_iso).replace(tzinfo=IST)
     return dt.astimezone(UTC).isoformat()
