@@ -4,6 +4,7 @@ from typing import Dict, Any
 
 from personalize_commons.constants.event_type import EventType
 from personalize_commons.constants.rabbit_mq_constants import RabbitMQConstants
+from personalize_commons.utils.datetime_utils import utc_now_iso
 
 
 class RabbitMqMessageBuilder:
@@ -17,7 +18,7 @@ class RabbitMqMessageBuilder:
         message = {
             RabbitMQConstants.Payload.EVENT_TYPE: str(event_type),
             RabbitMQConstants.Payload.SOURCE:source,
-            RabbitMQConstants.Payload.TIMESTAMP: datetime.now(timezone.utc).isoformat(),
+            RabbitMQConstants.Payload.TIMESTAMP: utc_now_iso(),
             RabbitMQConstants.Payload.PAYLOAD: payload,
             RabbitMQConstants.Payload.RETRY_COUNT: retry_count
         }
