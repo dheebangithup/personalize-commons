@@ -6,8 +6,9 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
-from personalize_commons.utils.datetime_utils import utc_now_iso
+from personalize_commons.utils.datetime_utils import utc_now_iso, to_ist_iso
 
 '''
 PK :tenant_id
@@ -113,6 +114,11 @@ class RecommendationEntity(BaseModel):
         if 'status' in item and isinstance(item['status'], str):
             item['status'] = RecommendationStatus(item['status'])
 
+        if DBConstants.CREATED_AT in item and item[DBConstants.CREATED_AT]:
+            item[DBConstants.CREATED_AT] = to_ist_iso( item[DBConstants.CREATED_AT])
+
+        if DBConstants.UPDATED_AT in item and item[DBConstants.UPDATED_AT]:
+            item[DBConstants.UPDATED_AT] = to_ist_iso(item[DBConstants.UPDATED_AT])
 
         if 'recom_file_key' in item:
             item['recom_file_key'] =  base64.urlsafe_b64encode(str(item['recom_file_key']).encode())
