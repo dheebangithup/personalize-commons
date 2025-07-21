@@ -46,8 +46,8 @@ class CampaignEntity(BaseModel):
     # Timestamps
     start_date: Optional[str] = None  # ISO format string
     end_date: Optional[str] = None  # ISO format string
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field()
+    updated_at: str = Field()
 
     # Additional metadata
     created_by: Optional[str] = None

@@ -77,8 +77,8 @@ class RecommendationEntity(BaseModel):
     recombee_errors: Optional[str] = Field(None, description="recombee api errors")
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="When the recommendation job was created")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="When the recommendation job was last updated")
+    created_at: datetime = Field( description="When the recommendation job was created")
+    updated_at: datetime = Field( description="When the recommendation job was last updated")
     completed_at: Optional[datetime] = Field(None, description="When the recommendation job was completed")
 
     # Additional metadata
