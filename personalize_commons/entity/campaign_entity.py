@@ -48,8 +48,8 @@ class CampaignEntity(BaseModel):
     # Timestamps
     start_date: Optional[str] = None  # ISO format string
     end_date: Optional[str] = None  # ISO format string
-    created_at: str = Field()
-    updated_at: str = Field()
+    created_at: Optional[str] = Field()
+    updated_at: Optional[str] = Field()
 
     # Additional metadata
     created_by: Optional[str] = None
