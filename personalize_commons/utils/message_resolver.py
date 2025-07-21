@@ -48,3 +48,37 @@ class MessageResolver:
             else:
                 result[key] = value
         return result
+
+    def validate_template(self, template: str, user_fields: list[str] = None, item_fields: list[str] = None) -> tuple[bool, list[str]]:
+        """
+        Validates that all placeholders in the template exist in the provided fields.
+        
+        Args:
+            template (str): The message template containing placeholders like ${user.name} or ${item.discount}
+            user_fields (list[str], optional): List of valid user field names. Defaults to None.
+            item_fields (list[str], optional): List of valid item field names. Defaults to None.
+            
+        Returns:
+            tuple[bool, list[str]]: A tuple containing:
+                - bool: True if all placeholders are valid, False otherwise
+                - list[str]: List of invalid field names found in the template
+        """
+        if user_fields is None:
+            user_fields = []
+        if item_fields is None:
+            item_fields = []
+            
+        invalid_fields = []
+        
+        # Find all placeholders in the template
+        for match in self.PLACEHOLDER_PATTERN.finditer(template):
+            obj_type = match.group(1)
+            field = match.group(0)  # The full match including ${user.} or ${item.}
+            field_name = match.group(2)  # Just the field name
+            
+            if obj_type == 'user' and field_name not in user_fields:
+                invalid_fields.append(field)
+            elif obj_type == 'item' and field_name not in item_fields:
+                invalid_fields.append(field)
+        
+        return (len(invalid_fields) == 0, invalid_fields)
