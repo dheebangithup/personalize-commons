@@ -7,7 +7,7 @@ from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 from personalize_commons.constants.app_constants import AppConstants
-from personalize_commons.constants.db_constants import STAUS_AT_INDEX, UPDATED_AT_INDEX
+from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
 from personalize_commons.utils.datetime_utils import utc_now_iso
 
@@ -172,7 +172,7 @@ class CampaignRepository:
                 end_date=end_date+timedelta(days=1)
             # If status is provided but no date range, use StatusIndex
             if status and not (start_date or end_date):
-                index_name = STAUS_AT_INDEX
+                index_name = DBConstants.STAUS_AT_INDEX
                 key_condition += ' AND #status = :status'
                 expr_attr_names['#status'] = 'status'
                 expr_attr_values[':status'] = status
@@ -181,7 +181,7 @@ class CampaignRepository:
 
             # Otherwise, use UpdatedAtIndex (default)
             else:
-                index_name = UPDATED_AT_INDEX
+                index_name = DBConstants.UPDATED_AT_INDEX
                 # Add date range to key condition if provided
                 if start_date and end_date:
                     key_condition += ' AND #updated_at BETWEEN :start_date AND :end_date'

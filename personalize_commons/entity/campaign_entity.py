@@ -6,7 +6,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from personalize_commons.constants.app_constants import AppConstants
-from personalize_commons.constants.db_constants import CREATED_AT, DBConstants
+from personalize_commons.constants.db_constants import  DBConstants
 from personalize_commons.utils.datetime_utils import to_ist_iso
 
 '''
