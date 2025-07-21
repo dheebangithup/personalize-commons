@@ -139,6 +139,34 @@ class UserRepository:
             logger.error(f"Error querying users: {str(e)}", exc_info=True)
             raise
 
+    def get_all_users_by_tenant(self, tenant_id: str) -> QueryResponse:
+        """
+        Retrieve all users for a specific tenant using a PartiQL query.
+
+        Args:
+            tenant_id: The ID of the tenant to retrieve users for
+
+        Returns:
+            QueryResponse containing the list of users and count
+        """
+        try:
+            query = f"""
+                SELECT * FROM {self.table_name} 
+                WHERE tenant_id = ?
+            """
+            
+            # Convert tenant_id to DynamoDB type format
+            params = [self._convert_to_dynamodb_type(tenant_id)]
+            
+            logger.info(f"Fetching all users for tenant: {tenant_id}")
+            items = self.execute_partiql(query, params)
+            
+            return QueryResponse(users=items, count=len(items))
+            
+        except Exception as e:
+            logger.error(f"Error retrieving users for tenant {tenant_id}: {str(e)}", exc_info=True)
+            raise
+
     def _convert_to_dynamodb_type(self, value: Any) -> Dict[str, Any]:
         """Convert Python value to DynamoDB attribute value format"""
         if value is None:
