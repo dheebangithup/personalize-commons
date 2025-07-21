@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.constants.db_constants import STAUS_AT_INDEX, CREATED_AT_INDEX
 from personalize_commons.entity.recommendation_entity import RecommendationEntity
+from personalize_commons.utils.datetime_utils import utc_now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,7 @@ class RecommendationRepository:
                 raise ValueError("Cannot change tenant_id of a recommendation")
                 
             # Always set updated_at to current time
-            update_dict['updated_at'] = datetime.utcnow().isoformat()
+            update_dict['updated_at'] = utc_now_iso()
                 
             # Convert back to entity to validate
             updated_entity = RecommendationEntity(**update_dict)

@@ -9,6 +9,7 @@ from botocore.exceptions import ClientError
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.constants.db_constants import STAUS_AT_INDEX, UPDATED_AT_INDEX
 from personalize_commons.entity.campaign_entity import CampaignEntity
+from personalize_commons.utils.datetime_utils import utc_now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,8 @@ class CampaignRepository:
 
     def create_campaign(self, campaign: CampaignEntity) -> CampaignEntity:
         try:
+            campaign.created_at=utc_now_iso()
+            campaign.updated_at=utc_now_iso()
             item = campaign.to_dynamodb_item()
             self.campaign_table.put_item(Item=item)
             return CampaignEntity.from_dynamodb_item(item)
@@ -74,6 +77,8 @@ class CampaignRepository:
             # Convert back to entity to validate
             updated_entity = CampaignEntity(**update_dict)
 
+
+
             # Prepare update expression
             update_expression = 'SET ' + ', '.join(f'#{k} = :{k}' for k in update_data.keys())
             expression_attribute_names = {f'#{k}': k for k in update_data.keys()}
@@ -82,7 +87,7 @@ class CampaignRepository:
             # Add updated_at timestamp
             update_expression += ', #updated_at = :updated_at'
             expression_attribute_names['#updated_at'] = 'updated_at'
-            expression_attribute_values[':updated_at'] = datetime.utcnow().isoformat()
+            expression_attribute_values[':updated_at'] = utc_now_iso()
 
             # Execute update
             self.campaign_table.update_item(
