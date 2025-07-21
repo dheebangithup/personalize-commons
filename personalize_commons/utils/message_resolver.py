@@ -49,36 +49,35 @@ class MessageResolver:
                 result[key] = value
         return result
 
-    def validate_template(self, template: str, user_fields: list[str] = None, item_fields: list[str] = None) -> tuple[bool, list[str]]:
+    def validate_template(self, template: str, field_types: dict[str, list[str]] = None) -> tuple[bool, list[str]]:
         """
-        Validates that all placeholders in the template exist in the provided fields.
+        Validates that all placeholders in the template exist in the provided field types.
         
         Args:
-            template (str): The message template containing placeholders like ${user.name} or ${item.discount}
-            user_fields (list[str], optional): List of valid user field names. Defaults to None.
-            item_fields (list[str], optional): List of valid item field names. Defaults to None.
+            template (str): The message template containing placeholders like ${type.field}
+            field_types (dict[str, list[str]], optional): Dictionary where keys are field types 
+                (e.g., 'user', 'item') and values are lists of valid field names for that type.
+                Example: {"user": ["name", "email"], "item": ["id", "name"]}
+                Defaults to None (treated as empty dict).
             
         Returns:
             tuple[bool, list[str]]: A tuple containing:
                 - bool: True if all placeholders are valid, False otherwise
-                - list[str]: List of invalid field names found in the template
+                - list[str]: List of invalid field references found in the template
         """
-        if user_fields is None:
-            user_fields = []
-        if item_fields is None:
-            item_fields = []
+        if field_types is None:
+            field_types = {}
             
         invalid_fields = []
         
         # Find all placeholders in the template
         for match in self.PLACEHOLDER_PATTERN.finditer(template):
             obj_type = match.group(1)
-            field = match.group(0)  # The full match including ${user.} or ${item.}
+            full_match = match.group(0)  # The full match including ${type.field}
             field_name = match.group(2)  # Just the field name
             
-            if obj_type == 'user' and field_name not in user_fields:
-                invalid_fields.append(field)
-            elif obj_type == 'item' and field_name not in item_fields:
-                invalid_fields.append(field)
+            # Check if the field type exists and if the field is in the allowed list
+            if obj_type not in field_types or field_name not in field_types[obj_type]:
+                invalid_fields.append(full_match)
         
         return (len(invalid_fields) == 0, invalid_fields)
