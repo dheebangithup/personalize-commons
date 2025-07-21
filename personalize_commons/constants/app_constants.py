@@ -31,3 +31,8 @@ class AppConstants:
     TENANT_PUBLIC_KEY = "tenant_public_key"
     TENANT_PRIVATE_KEY = "tenant_private_key"
     TENANT_REGION = "data_base_region"
+
+    # tenant fields
+    FIELD_NAME='field_name'
+    displayName='display_name'
+    DTYPE='dtype'
