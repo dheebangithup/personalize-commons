@@ -22,4 +22,12 @@ class UserService:
             return self.user_repo.query_users(conditions,tenant_id=tenant_id)
         except Exception as e:
             logger.error(f"Error querying users: {str(e)}", exc_info=True)
-            raise
+            return QueryResponse(count=0,users=[])
+
+
+    def get_all_users_by_tenant(self, tenant_id: str) -> QueryResponse:
+        try:
+            return self.user_repo.get_all_users_by_tenant(tenant_id=tenant_id)
+        except Exception as e:
+            logger.error(f"Error get all users: {str(e)}", exc_info=True)
+            return QueryResponse(count=0,users=[])
