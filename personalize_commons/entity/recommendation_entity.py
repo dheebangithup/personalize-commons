@@ -120,7 +120,7 @@ class RecommendationEntity(BaseModel):
         if DBConstants.UPDATED_AT in item and item[DBConstants.UPDATED_AT]:
             item[DBConstants.UPDATED_AT] = to_ist_iso(item[DBConstants.UPDATED_AT])
 
-        if 'recom_file_key' in item:
+        if 'recom_file_key' in item and item['recom_file_key'] is not None:
             item['recom_file_key'] =  base64.urlsafe_b64encode(str(item['recom_file_key']).encode())
         # Convert ISO format strings back to datetime objects
         for field in ['created_at', 'updated_at', 'completed_at']:
