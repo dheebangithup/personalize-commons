@@ -77,7 +77,9 @@ class MessageResolver:
             field_name = match.group(2)  # Just the field name
             
             # Check if the field type exists and if the field is in the allowed list
-            if obj_type not in field_types or field_name not in field_types[obj_type]:
+            if obj_type not in field_types:
+                invalid_fields.append(full_match)
+            elif field_name not in field_types[obj_type]:
                 invalid_fields.append(full_match)
         
         return (len(invalid_fields) == 0, invalid_fields)
