@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
-from personalize_commons.utils.datetime_utils import utc_now_iso, to_ist_iso
+from personalize_commons.utils.datetime_utils import ist_now_iso
 
 '''
 PK :tenant_id
@@ -113,15 +113,15 @@ class RecommendationEntity(BaseModel):
         # Convert string status back to enum
         if 'status' in item and isinstance(item['status'], str):
             item['status'] = RecommendationStatus(item['status'])
-
-        if DBConstants.CREATED_AT in item and item[DBConstants.CREATED_AT]:
-            item[DBConstants.CREATED_AT] = to_ist_iso( item[DBConstants.CREATED_AT])
-
-        if DBConstants.UPDATED_AT in item and item[DBConstants.UPDATED_AT]:
-            item[DBConstants.UPDATED_AT] = to_ist_iso(item[DBConstants.UPDATED_AT])
-
-        if DBConstants.COMPLETED_AT in item and item[DBConstants.COMPLETED_AT]:
-            item[DBConstants.COMPLETED_AT] = to_ist_iso(item[DBConstants.COMPLETED_AT])
+        #
+        # if DBConstants.CREATED_AT in item and item[DBConstants.CREATED_AT]:
+        #     item[DBConstants.CREATED_AT] = to_ist_iso( item[DBConstants.CREATED_AT])
+        #
+        # if DBConstants.UPDATED_AT in item and item[DBConstants.UPDATED_AT]:
+        #     item[DBConstants.UPDATED_AT] = to_ist_iso(item[DBConstants.UPDATED_AT])
+        #
+        # if DBConstants.COMPLETED_AT in item and item[DBConstants.COMPLETED_AT]:
+        #     item[DBConstants.COMPLETED_AT] = to_ist_iso(item[DBConstants.COMPLETED_AT])
 
         if 'recom_file_key' in item and item['recom_file_key'] is not None:
             item['recom_file_key'] =  base64.urlsafe_b64encode(str(item['recom_file_key']).encode())
@@ -151,7 +151,7 @@ class RecommendationEntity(BaseModel):
             campaign_id=campaign.campaign_id,
             status=status,  # Use the status parameter instead of hardcoded value
             metadata=campaign.model_dump(),
-            created_at=utc_now_iso(),
-            updated_at=utc_now_iso(),
+            created_at=ist_now_iso(),
+            updated_at=ist_now_iso(),
             flows=flows,
         )

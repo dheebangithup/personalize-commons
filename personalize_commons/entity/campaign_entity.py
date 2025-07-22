@@ -6,8 +6,6 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from personalize_commons.constants.app_constants import AppConstants
-from personalize_commons.constants.db_constants import  DBConstants
-from personalize_commons.utils.datetime_utils import to_ist_iso
 
 '''
 PK :tenant_id
@@ -90,10 +88,10 @@ class CampaignEntity(BaseModel):
         # Convert DynamoDB format to our model
         if 'status' in item and item['status']:
             item['status'] = CampaignStatus(item['status'])
-        if DBConstants.CREATED_AT in item and item[DBConstants.CREATED_AT]:
-            item[DBConstants.CREATED_AT] = to_ist_iso( item[DBConstants.CREATED_AT])
-
-        if DBConstants.UPDATED_AT in item and item[DBConstants.UPDATED_AT]:
-            item[DBConstants.UPDATED_AT] = to_ist_iso(item[DBConstants.UPDATED_AT])
+        # if DBConstants.CREATED_AT in item and item[DBConstants.CREATED_AT]:
+        #     item[DBConstants.CREATED_AT] = to_ist_iso( item[DBConstants.CREATED_AT])
+        #
+        # if DBConstants.UPDATED_AT in item and item[DBConstants.UPDATED_AT]:
+        #     item[DBConstants.UPDATED_AT] = to_ist_iso(item[DBConstants.UPDATED_AT])
 
         return cls(**item)

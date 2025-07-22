@@ -1,15 +1,14 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
-from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
-from personalize_commons.utils.datetime_utils import utc_now_iso
+from personalize_commons.utils.datetime_utils import ist_now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +20,8 @@ class CampaignRepository:
 
     def create_campaign(self, campaign: CampaignEntity) -> CampaignEntity:
         try:
-            campaign.created_at=utc_now_iso()
-            campaign.updated_at=utc_now_iso()
+            campaign.created_at = ist_now_iso()
+            campaign.updated_at = ist_now_iso()
             item = campaign.to_dynamodb_item()
             self.campaign_table.put_item(Item=item)
             return CampaignEntity.from_dynamodb_item(item)
@@ -35,7 +34,7 @@ class CampaignRepository:
             print(e)
             raise Exception(e)
 
-    def get_campaign(self, campaign_id: str,tenant_id:str) -> Optional[CampaignEntity]:
+    def get_campaign(self, campaign_id: str, tenant_id: str) -> Optional[CampaignEntity]:
         try:
             response = self.campaign_table.get_item(
                 Key={
@@ -52,14 +51,15 @@ class CampaignRepository:
             print("Full error:", e.response)
             raise Exception(error_msg)
 
-    def update_campaign(self, campaign_id: str, update_data: Dict[str, Any],tenant_id:str) -> Optional[CampaignEntity]:
+    def update_campaign(self, campaign_id: str, update_data: Dict[str, Any], tenant_id: str) -> Optional[
+        CampaignEntity]:
         """
         Update a campaign by ID with the provided data.
         Returns the updated campaign if successful, None otherwise.
         """
         try:
             # First get the existing campaign to merge with updates
-            existing = self.get_campaign(campaign_id,tenant_id)
+            existing = self.get_campaign(campaign_id, tenant_id)
             if not existing:
                 return None
 
@@ -77,8 +77,6 @@ class CampaignRepository:
             # Convert back to entity to validate
             updated_entity = CampaignEntity(**update_dict)
 
-
-
             # Prepare update expression
             update_expression = 'SET ' + ', '.join(f'#{k} = :{k}' for k in update_data.keys())
             expression_attribute_names = {f'#{k}': k for k in update_data.keys()}
@@ -87,7 +85,7 @@ class CampaignRepository:
             # Add updated_at timestamp
             update_expression += ', #updated_at = :updated_at'
             expression_attribute_names['#updated_at'] = 'updated_at'
-            expression_attribute_values[':updated_at'] = utc_now_iso()
+            expression_attribute_values[':updated_at'] = ist_now_iso()
 
             # Execute update
             self.campaign_table.update_item(
@@ -110,7 +108,7 @@ class CampaignRepository:
             logger.error(f"Unexpected error updating campaign: {str(e)}")
             raise
 
-    def delete_campaign(self, campaign_id: str,tenant_id:str) -> bool:
+    def delete_campaign(self, campaign_id: str, tenant_id: str) -> bool:
         """
         Delete a campaign by ID.
         Returns True if the campaign was deleted, False otherwise.
@@ -169,7 +167,7 @@ class CampaignRepository:
             index_name = None
             # This will exclude all records from July 15, unless they were created exactly at midnight (00:00:00) — which is very unlikely.
             if end_date is not None:
-                end_date=end_date+timedelta(days=1)
+                end_date = end_date + timedelta(days=1)
             # If status is provided but no date range, use StatusIndex
             if status and not (start_date or end_date):
                 index_name = DBConstants.STAUS_AT_INDEX

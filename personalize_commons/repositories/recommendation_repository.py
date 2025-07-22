@@ -1,23 +1,22 @@
 import logging
 import os
-from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
+from typing import Optional, Dict, Any
 
-import boto3
-from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.recommendation_entity import RecommendationEntity
-from personalize_commons.utils.datetime_utils import utc_now_iso
+from personalize_commons.utils.datetime_utils import ist_now_iso
 
 logger = logging.getLogger(__name__)
+
 
 class RecommendationRepository:
     """Repository class for handling RecommendationEntity CRUD operations with DynamoDB."""
 
-    def __init__(self,resource):
+    def __init__(self, resource):
         """Initialize the repository with DynamoDB connection."""
         self.resource = resource
         self.table_name = os.getenv('DYNAMODB_TABLE_RECOMMENDATIONS', 'recommendations')
@@ -52,7 +51,8 @@ class RecommendationRepository:
             # Convert to DynamoDB item and save
             item = recommendation.to_dynamodb_item()
             self.table.put_item(Item=item)
-            logger.info(f"Created recommendation {recommendation.recommendation_id} for tenant {recommendation.tenant_id}")
+            logger.info(
+                f"Created recommendation {recommendation.recommendation_id} for tenant {recommendation.tenant_id}")
             return recommendation
 
         except ClientError as e:
@@ -63,7 +63,8 @@ class RecommendationRepository:
             logger.error(f"Unexpected error creating recommendation: {str(e)}", exc_info=True)
             raise
 
-    def update_recommendation(self, recommendation_id: str, tenant_id: str, update_data: Dict[str, Any]) -> Optional[RecommendationEntity]:
+    def update_recommendation(self, recommendation_id: str, tenant_id: str, update_data: Dict[str, Any]) -> Optional[
+        RecommendationEntity]:
         """
         Update a recommendation with the provided data.
         
@@ -87,33 +88,35 @@ class RecommendationRepository:
             )
             if not existing:
                 return None
-                
+
             # Convert entity to dict, update with new values, and back to entity
             update_dict = existing.model_dump()
-            
+
             # Remove updated_at from update_data if it exists to prevent duplicate
             update_data.pop('updated_at', None)
-            
+
             # Update with new values
             update_dict.update({
-                k: v for k, v in update_data.items() 
+                k: v for k, v in update_data.items()
                 if v is not None and k in update_dict
             })
-            
+
             # Ensure tenant_id remains unchanged
             if AppConstants.TENANT_ID in update_dict and update_dict[AppConstants.TENANT_ID] != tenant_id:
                 raise ValueError("Cannot change tenant_id of a recommendation")
-                
+
             # Always set updated_at to current time
-            update_dict['updated_at'] = utc_now_iso()
-                
+            update_dict['updated_at'] = ist_now_iso()
+
             # Convert back to entity to validate
             updated_entity = RecommendationEntity(**update_dict)
 
             # Prepare update expression
-            update_expression = 'SET ' + ', '.join(f'#{k} = :{k}' for k in update_dict.keys() if k != 'tenant_id' and k != 'recommendation_id')
-            expression_attribute_names = {f'#{k}': k for k in update_dict.keys() if k != 'tenant_id' and k != 'recommendation_id'}
-            
+            update_expression = 'SET ' + ', '.join(
+                f'#{k} = :{k}' for k in update_dict.keys() if k != 'tenant_id' and k != 'recommendation_id')
+            expression_attribute_names = {f'#{k}': k for k in update_dict.keys() if
+                                          k != 'tenant_id' and k != 'recommendation_id'}
+
             # Convert any datetime objects to ISO format strings
             expression_attribute_values = {}
             for k, v in update_dict.items():
@@ -123,7 +126,7 @@ class RecommendationRepository:
                     expression_attribute_values[f':{k}'] = v.isoformat()
                 else:
                     expression_attribute_values[f':{k}'] = v
-            
+
             # Execute update
             self.table.update_item(
                 Key={
@@ -135,9 +138,9 @@ class RecommendationRepository:
                 ExpressionAttributeValues=expression_attribute_values,
                 ReturnValues='ALL_NEW'
             )
-            
+
             return updated_entity
-            
+
         except ClientError as e:
             error_msg = f"DynamoDB error updating recommendation: {e.response['Error']['Message']}"
             logger.error(error_msg, exc_info=True)
@@ -188,14 +191,14 @@ class RecommendationRepository:
             raise
 
     def get_recommendations(
-        self,
-        tenant_id: str,
-        status: str = None,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        page_size: int = 10,
-        last_evaluated_key: dict = None,
-        sort_order: str = "desc"
+            self,
+            tenant_id: str,
+            status: str = None,
+            start_date: datetime = None,
+            end_date: datetime = None,
+            page_size: int = 10,
+            last_evaluated_key: dict = None,
+            sort_order: str = "desc"
     ) -> Dict[str, Any]:
         """
         Get recommendations by status and/or date range using appropriate LSI.
