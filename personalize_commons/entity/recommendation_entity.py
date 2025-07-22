@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
-from personalize_commons.utils.datetime_utils import ist_now_iso
+from personalize_commons.utils.datetime_utils import ist_now_iso, ist_now
 
 '''
 PK :tenant_id
@@ -151,7 +151,7 @@ class RecommendationEntity(BaseModel):
             campaign_id=campaign.campaign_id,
             status=status,  # Use the status parameter instead of hardcoded value
             metadata=campaign.model_dump(),
-            created_at=ist_now_iso(),
-            updated_at=ist_now_iso(),
+            created_at=ist_now(),
+            updated_at=ist_now(),
             flows=flows,
         )
