@@ -8,4 +8,5 @@ class DBConstants:
     # fields
     CREATED_AT = 'created_at'
     UPDATED_AT = 'updated_at'
+    COMPLETED_AT = 'completed_at'
     STATUS = 'status'
