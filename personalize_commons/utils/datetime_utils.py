@@ -1,23 +1,26 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-UTC = ZoneInfo("UTC")
+# Define Indian Standard Time
 IST = ZoneInfo("Asia/Kolkata")
 
+def ist_now() -> datetime:
+    """
+    Get current datetime in IST timezone.
+    """
+    return datetime.now(IST)
 
-# for strorin the date tin to DB
-def utc_now_iso() -> str:
-    """Get current UTC time in ISO format (for DB store)."""
-    return datetime.now(UTC).isoformat()
+def ist_now_iso() -> str:
+    """
+    Get current IST time in ISO format (useful for storing in DB or sending to frontend).
+    Example: "2025-07-23T12:34:56+05:30"
+    """
+    return ist_now().isoformat()
 
-# return to ui
-def to_ist_iso(utc_iso: str) -> str:
-    """Convert UTC ISO string to IST ISO string (for UI)."""
-    dt = datetime.fromisoformat(utc_iso).replace(tzinfo=UTC)
-    return dt.astimezone(IST).isoformat()
-
-# ist_utc to utc_iso
-def ist_to_utc_iso(ist_iso: str) -> str:
-    dt = datetime.fromisoformat(ist_iso).replace(tzinfo=IST)
-    return dt.astimezone(UTC).isoformat()
+def ist_now_human_readable() -> str:
+    """
+    Return IST time in human-friendly format (e.g., for logging or UI).
+    Example: "Jul 23, 2025 12:34 PM"
+    """
+    return ist_now().strftime("%b %d, %Y %I:%M %p")  # 12-hour format with AM/PM
 
