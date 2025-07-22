@@ -59,3 +59,4 @@ class QueryResponse(BaseModel):
     count: int
     users: Optional[List[Dict[str, Any]]]
     message: Optional[str] = None
+    isAppliedFilter: Optional[bool] = None
