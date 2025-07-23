@@ -37,5 +37,5 @@ class AppConstants:
     displayName='display_name'
     DTYPE='dtype'
     email='email'
-    firebase_uid='firebase_uid'
+    uid='uid'
     isEmailVerified='email_verified'
