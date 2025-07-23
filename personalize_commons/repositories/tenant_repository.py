@@ -51,7 +51,7 @@ class TenantRepository:
         except Exception as e:
             raise e
 
-    def update_tenant(self, tenant_id: str, update_data: dict) -> dict:
+    def update_tenant(self, tenant_id: str,email:str, update_data: dict) -> dict:
         """
         Update a tenant's information.
         
@@ -73,7 +73,7 @@ class TenantRepository:
             
             # Add each field from update_data to the update expression
             for i, (key, value) in enumerate(update_data.items()):
-                if key != 'tenant_id':  # Prevent updating the tenant_id
+                if key != AppConstants.TENANT_ID:  # Prevent updating the tenant_id
                     placeholder = f'#{key}'
                     value_placeholder = f':val{i}'
                     update_expression += f"{placeholder} = {value_placeholder}, "
@@ -84,7 +84,7 @@ class TenantRepository:
             update_expression = update_expression.rstrip(', ')
             
             response = self.table.update_item(
-                Key={'tenant_id': tenant_id},
+                Key={AppConstants.TENANT_ID: tenant_id,AppConstants.EMAIL:email},
                 UpdateExpression=update_expression,
                 ExpressionAttributeNames=expression_attribute_names,
                 ExpressionAttributeValues=expression_attribute_values,
