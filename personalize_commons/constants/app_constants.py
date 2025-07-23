@@ -38,4 +38,5 @@ class AppConstants:
     DTYPE='dtype'
     EMAIL='email'
     UID='uid'
+    FIREBASE_UID='firebase_uid'
     IS_EMAIL_VERIFIED='email_verified'
