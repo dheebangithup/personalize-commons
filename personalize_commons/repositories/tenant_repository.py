@@ -2,7 +2,10 @@ import os
 from typing import List, Dict
 import logging
 
+from boto3.dynamodb.conditions import Key
+
 from personalize_commons.constants.app_constants import AppConstants
+from personalize_commons.constants.db_constants import DBConstants
 
 logger = logging.getLogger(__name__)
 
@@ -95,3 +98,16 @@ class TenantRepository:
         except Exception as e:
             logging.error(f"Error updating tenant {tenant_id}: {str(e)}")
             raise e
+
+    def get_by_email(self, email: str):
+        """
+        Query tenant data using email (via GSI).
+        Returns first match (or list if multi-tenant by email).
+        """
+        response = self.table.query(
+            IndexName=DBConstants.EMAIL_INDEX,  # GSI name
+            KeyConditionExpression=Key(AppConstants.EMAIL).eq(email)
+        )
+
+        items = response.get("Items", [])
+        return items[0] if items else None
