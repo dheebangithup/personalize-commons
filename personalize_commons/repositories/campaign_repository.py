@@ -173,8 +173,7 @@ class CampaignRepository:
                 index_name = DBConstants.STAUS_AT_INDEX
                 key_condition += ' AND #status = :status'
                 expr_attr_names['#status'] = 'status'
-                expr_attr_values[':status'] = {'S': status}  # Ensure correct DynamoDB type
-
+                expr_attr_values[':status'] = status
 
 
 
@@ -185,14 +184,14 @@ class CampaignRepository:
                 if start_date and end_date:
                     key_condition += ' AND #updated_at BETWEEN :start_date AND :end_date'
                     expr_attr_names['#updated_at'] = 'updated_at'
-                    expr_attr_values[':start_date'] = {'S': start_date.isoformat()}  # Ensure string type
-                    expr_attr_values[':end_date'] = {'S': end_date.isoformat()}  # Ensure string type
+                    expr_attr_values[':start_date'] = start_date.isoformat()
+                    expr_attr_values[':end_date'] = end_date.isoformat()
 
                 # Add status as filter if provided
                 if status:
                     filter_expression.append('#status = :status')
                     expr_attr_names['#status'] = 'status'
-                    expr_attr_values[':status'] = {'S': status}  # Ensure correct DynamoDB type
+                    expr_attr_values[':status'] = status
 
             # Build query parameters
             query_params = {
