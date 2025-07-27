@@ -40,3 +40,5 @@ class AppConstants:
     UID='uid'
     FIREBASE_UID='firebase_uid'
     IS_EMAIL_VERIFIED='email_verified'
+
+    SUPPORTED_DATATYPES=['int','float','string','datetime','boolean']
