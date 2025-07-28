@@ -57,7 +57,7 @@ class CampaignEntity(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
-        schema_extra = {
+        json_schema_extra  = {
             "example": {
                 "PK": "TENANT#tenant123",
                 "SK": "CAMPAIGN#campaign_abc123",
