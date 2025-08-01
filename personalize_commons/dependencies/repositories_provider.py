@@ -25,7 +25,7 @@ def get_tenant_repository():
 def get_user_repository():
     global __user_repository
     if __user_repository is None:
-        __user_repository = UserRepository(client=get_dynamodb_client())
+        __user_repository = UserRepository(client=get_dynamodb_client(),resource=get_dynamodb_resource())
     return __user_repository
 
 

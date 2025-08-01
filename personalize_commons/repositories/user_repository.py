@@ -2,7 +2,9 @@ import logging
 import os
 from typing import Dict, List, Any, Optional
 
+from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.types import TypeDeserializer
+from botocore.exceptions import ClientError
 
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.model.user_model import QueryResponse
@@ -13,9 +15,12 @@ deserializer = TypeDeserializer()
 
 class UserRepository:
 
-    def __init__(self, client):
+    def __init__(self, client,resource):
+        self.resource = resource
         self.dynamodb_client = client
         self.table_name = os.getenv("DYNAMODB_TABLE_USERS")
+        self.table = self.resource.Table(self.table_name)
+
         self._initialized = True
         logger.info(f"Initialized UserRepository with table: {self.table_name}")
 
@@ -202,3 +207,24 @@ class UserRepository:
         except Exception as e:
             logger.error(f"Failed to add user {item[AppConstants.USER_ID]}: {str(e)}")
             raise
+
+    def query_users_by_tenant(self, tenant_id: str) -> list:
+        """
+        Query all items for a specific tenant
+
+        Args:
+            tenant_id (str): The tenant identifier
+
+        Returns:
+            list: List of items for the tenant
+
+        Raises:
+            DynamoDBError: If there's an error accessing DynamoDB
+        """
+        try:
+            response = self.table.query(
+                KeyConditionExpression=Key(AppConstants.TENANT_ID).eq(tenant_id)
+            )
+            return response.get('Items', [])
+        except ClientError as e:
+            raise e
