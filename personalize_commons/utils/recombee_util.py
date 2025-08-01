@@ -1,5 +1,7 @@
 import pandas as pd
 
+from personalize_commons.constants.app_constants import AppConstants
+
 
 class RecombeeUtil:
 
@@ -13,5 +15,18 @@ class RecombeeUtil:
         if pd.api.types.is_numeric_dtype(series):
             return "double"
         elif pd.api.types.is_bool_dtype(series):
+            return "boolean"
+        return "string"
+
+    @staticmethod
+    def infer_property_type( dtype:str) -> str:
+        if dtype=='datetime':
+            return "timestamp"
+        # Integer
+        if dtype=='int':
+            return "int"
+        if dtype=='float':
+            return "double"
+        if dtype=='boolean':
             return "boolean"
         return "string"
