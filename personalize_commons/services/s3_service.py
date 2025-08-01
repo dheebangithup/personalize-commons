@@ -7,7 +7,26 @@ import boto3
 from botocore.exceptions import ClientError
 
 from personalize_commons.exception.s3_upload_exception import S3UploadException
+from decimal import Decimal
+from datetime import datetime, date
+import uuid
+import base64
+import math
 
+def safe_json_serializer(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    if isinstance(obj, (bytes, bytearray)):
+        return base64.b64encode(obj).decode('utf-8')
+    if isinstance(obj, set):
+        return list(obj)
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return str(obj)
 
 class S3Service:
     """Service for handling S3 operations for JSONL files."""
@@ -75,7 +94,7 @@ class S3Service:
         """
         try:
             # Convert data to JSONL format
-            jsonl_content = "\n".join(json.dumps(item) for item in data)
+            jsonl_content = "\n".join(json.dumps(item,default=safe_json_serializer) for item in data)
 
             # Generate S3 key
             s3_key = self._get_s3_key(tenant_id, recommendation_id, campaign_id)
