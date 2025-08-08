@@ -4,6 +4,9 @@ from typing import Any, Dict, List, Union
 from personalize_commons.constants.app_constants import AppConstants
 
 """
+
+Notion wikki: https://www.notion.so/Recombee-ReQL-filter-2491d2ff3fca809880ace0fa1ea4dbf9
+
 ================================================================================
 ReQL Filter Compiler – Usage Guide
 ================================================================================
@@ -377,28 +380,29 @@ if __name__ == '__main__':
   "op": "AND",
   "rules": [
     {
-      "field": "category",
-      "operator": "in",
-      "value": [
-        "99"
-      ]
+      "field": "itemId",
+      "operator": "==",
+      "value": 1
     },
     {
       "op": "OR",
-      "rules": []
-    },
-    {
-      "field": "itemId",
-      "operator": "in",
-      "value": [
-        "900",
-        "600"
+      "rules": [
+        {
+          "field": "price",
+          "operator": "==",
+          "value": 22
+        },
+        {
+          "field": "is_available",
+          "operator": "==",
+          "value": True
+        }
       ]
     }
   ]
 }
 
-    reql = compiler.compile(dsl, allow_context_item=False)
+    reql = compiler.compile(dsl, allow_context_item=True)
     print(reql)
     # Output: "'category' == "Books" AND 'price' <= 500 AND 'itemId' in {"item-42", "item-77"}"
 
