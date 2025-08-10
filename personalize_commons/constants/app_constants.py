@@ -1,4 +1,6 @@
 class AppConstants:
+    RULES = 'rules'
+    OP = 'op'
     TENANT_FIELDS = 'fields'
     MESSAGE ='message'
     ITEM = 'item'

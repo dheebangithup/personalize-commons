@@ -362,6 +362,176 @@ class ReQLFilterCompiler:
 
         return self.compile_group(dsl_obj, allow_context_item=allow_context_item)
 
+    def extract_fields(self, dsl_json: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Extracts field names and their data types from a DSL (Domain Specific Language) JSON structure.
+        Processes nested rules and groups recursively, maintaining first-seen precedence for field types.
+
+        Behavior:
+        - Returns field-type pairs found in valid rules
+        - Skips invalid nodes silently
+        - First dtype encountered for a field wins (no overwrites)
+        - Falls back to schema dtype if not specified in rule
+
+        Args:
+            dsl_json: The DSL filter structure to process. Expected format:
+                {
+                    "op": "AND"/"OR",
+                    "rules": [
+                        {"field": "name", "operator": "...", "value": "...", "dtype": "..."},
+                        {"op": "AND", "rules": [...]},  # Nested groups
+                        ...
+                    ]
+                }
+
+        Returns:
+            Dict[str, str]: Mapping of field names to their data types.
+            Example: {'price': 'float', 'category': 'string'}
+
+        Raises:
+            ReQLCompilationError: For structural issues including:
+                - Input is not a dictionary
+                - Rules is not a list in group nodes
+                - Malformed DSL structure (AttributeError/TypeError cases)
+
+        Notes:
+            - Silently skips:
+                - Rules missing 'field' property
+                - Non-dict nodes in rules lists
+                - Fields not in schema (unless dtype specified in rule)
+                - Invalid nodes that can't be processed
+            - For fields in schema but without explicit dtype, uses schema's dtype
+            - For fields not in schema but with explicit dtype, uses rule's dtype
+        """
+        field_types = {}
+
+        def process_node(node: Dict[str, Any]):
+            if 'op' in node:  # It's a group
+                rules = node.get('rules', [])
+                if not isinstance(rules, list):
+                    raise ReQLCompilationError("Rules must be a list")
+
+                for rule in rules:
+                    if not isinstance(rule, dict):
+                        continue  # Skip non-dict nodes
+                    try:
+                        process_node(rule)
+                    except (AttributeError, TypeError):
+                        continue  # Skip invalid nodes
+            else:  # It's a rule
+                field_name = node.get('field')
+                if not field_name:
+                    return
+
+                # Get dtype from rule or schema, default to None if not in schema
+                dtype = node.get('dtype')
+                if dtype is None and field_name in self.schema:
+                    dtype = self.schema[field_name]
+
+                if dtype:  # Only add if we have a dtype (either from rule or schema)
+                    if field_name not in field_types:  # First occurrence wins
+                        field_types[field_name] = dtype
+
+        try:
+            if not isinstance(dsl_json, dict):
+                raise ReQLCompilationError("DSL must be a dictionary")
+            process_node(dsl_json)
+        except (AttributeError, TypeError) as e:
+            raise ReQLCompilationError("Invalid DSL structure") from e
+
+        return field_types
+
+    def validate_fields_against_updates(
+            self,
+            extracted_fields: Dict[str, str],
+            db_updates: Dict[str, Dict[str, Any]]
+    ) -> None:
+        """
+        Validates extracted filter fields against database schema updates.
+
+        Checks if all fields used in filters exist in the updated database schema
+        and verifies type compatibility where possible.
+
+        Args:
+            extracted_fields: Field-type mapping from extract_fields()
+                             Format: {'field_name': 'dtype', ...}
+            db_updates: Current database schema updates
+                       Format: {
+                           'field_name': {
+                               'type': 'new_type',
+                               'other_metadata': ...
+                           },
+                           ...
+                       }
+
+        Raises:
+            ReQLCompilationError: If any validation fails, with details including:
+                - Fields missing in database schema
+                - Type incompatibilities (where detectable)
+                - Invalid field specifications
+
+        Example:
+            >>> compiler.validate_fields_against_updates(
+            ...     {'price': 'float', 'category': 'string'},
+            ...     {'price': {'type': 'float'}, 'name': {'type': 'string'}}
+            ... )
+            # Raises: ReQLCompilationError("Missing fields in database: category")
+        """
+        missing_fields = []
+        type_mismatches = []
+
+        for field, extracted_type in extracted_fields.items():
+            # Check field existence
+            if field not in db_updates:
+                missing_fields.append(field)
+                continue
+
+            # Check type compatibility if db type exists
+            db_type = db_updates[field].get('type')
+            if db_type and not self._types_compatible(extracted_type, db_type):
+                type_mismatches.append((field, extracted_type, db_type))
+
+        # Build comprehensive error message if any issues found
+        errors = []
+        if missing_fields:
+            errors.append(f"Missing fields in database: {', '.join(sorted(missing_fields))}")
+        if type_mismatches:
+            mismatch_msgs = [
+                f"{field} (filter:{extr_type} vs db:{db_type})"
+                for field, extr_type, db_type in type_mismatches
+            ]
+            errors.append(f"Type mismatches: {', '.join(mismatch_msgs)}")
+
+        if errors:
+            raise ReQLCompilationError("; ".join(errors))
+
+    def _types_compatible(self, filter_type: str, db_type: str) -> bool:
+        """
+        Internal method to check type compatibility between filter and database types.
+
+        Args:
+            filter_type: Type from filter DSL
+            db_type: Type from database schema
+
+        Returns:
+            bool: True if types are compatible, False otherwise
+        """
+        # Basic type compatibility matrix
+        compatibility = {
+            'string': {'text', 'varchar', 'char', 'string'},
+            'int': {'integer', 'int', 'bigint', 'smallint'},
+            'float': {'float', 'double', 'decimal', 'numeric'},
+            'boolean': {'bool', 'boolean'},
+            'datetime': {'timestamp', 'datetime', 'date'}
+        }
+
+        # Normalize types for comparison
+        filter_type = filter_type.lower()
+        db_type = db_type.lower()
+
+        # Check direct match or compatibility group
+        return (filter_type == db_type or
+                db_type in compatibility.get(filter_type, set()))
 
 if __name__ == '__main__':
     schema = {

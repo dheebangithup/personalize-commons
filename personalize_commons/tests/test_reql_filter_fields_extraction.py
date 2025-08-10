@@ -1,0 +1,268 @@
+import pytest
+
+from personalize_commons.utils.reql_filter_compiler import ReQLFilterCompiler, ReQLCompilationError
+
+
+@pytest.fixture
+def schema():
+    return {
+        'category': 'string',
+        'brand': 'string',
+        'price': 'float',
+        'rating': 'float',
+        'published_at': 'datetime',
+        'is_available': 'boolean',
+        'itemId': 'int'
+    }
+
+@pytest.fixture
+def compiler(schema):
+    return ReQLFilterCompiler(schema)
+
+# ----------------------------
+# extract_fields Test Cases
+# ----------------------------
+
+def test_extract_basic_fields(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {"field": "category", "operator": "==", "value": "Books", "dtype": "string"},
+            {"field": "price", "operator": "<=", "value": 500, "dtype": "float"}
+        ]
+    }
+    expected = {'category': 'string', 'price': 'float'}
+    assert compiler.extract_fields(dsl) == expected
+
+def test_extract_nested_groups(compiler):
+    dsl = {
+        "op": "OR",
+        "rules": [
+            {
+                "op": "AND",
+                "rules": [
+                    {"field": "category", "operator": "==", "value": "Books", "dtype": "string"},
+                    {"field": "brand", "operator": "==", "value": "Nike", "dtype": "string"}
+                ]
+            },
+            {"field": "price", "operator": "<=", "value": 100, "dtype": "float"}
+        ]
+    }
+    expected = {'category': 'string', 'brand': 'string', 'price': 'float'}
+    assert compiler.extract_fields(dsl) == expected
+
+def test_extract_duplicate_fields(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {"field": "price", "operator": ">", "value": 100, "dtype": "float"},
+            {"field": "price", "operator": "<", "value": 500, "dtype": "int"}  # Should keep first dtype
+        ]
+    }
+    expected = {'price': 'float'}  # First occurrence wins
+    assert compiler.extract_fields(dsl) == expected
+
+def test_extract_empty_rules(compiler):
+    dsl = {"op": "AND", "rules": []}
+    assert compiler.extract_fields(dsl) == {}
+
+def test_extract_missing_dtype_uses_schema(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {"field": "category", "operator": "==", "value": "Books"},  # Missing dtype
+            {"field": "price", "operator": "<=", "value": 500, "dtype": "float"}
+        ]
+    }
+    expected = {'category': 'string', 'price': 'float'}  # Gets 'string' from schema
+    assert compiler.extract_fields(dsl) == expected
+
+def test_extract_with_context_item(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {"field": "brand", "operator": "==", "value": {"$context_item": "brand"}, "dtype": "string"},
+            {"field": "price", "operator": "<=", "value": 100, "dtype": "float"}
+        ]
+    }
+    expected = {'brand': 'string', 'price': 'float'}
+    assert compiler.extract_fields(dsl) == expected
+
+def test_extract_deeply_nested(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {"field": "category", "operator": "==", "value": "Books", "dtype": "string"},
+            {
+                "op": "OR",
+                "rules": [
+                    {"field": "brand", "operator": "==", "value": "Nike", "dtype": "string"},
+                    {
+                        "op": "AND",
+                        "rules": [
+                            {"field": "price", "operator": ">=", "value": 100, "dtype": "float"},
+                            {"field": "rating", "operator": ">=", "value": 4, "dtype": "float"}
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+    expected = {
+        'category': 'string',
+        'brand': 'string',
+        'price': 'float',
+        'rating': 'float'
+    }
+    assert compiler.extract_fields(dsl) == expected
+
+# ----------------------------
+# Negative Test Cases
+# ----------------------------
+
+def test_extract_invalid_structure(compiler):
+    dsl = {"op": "AND", "rules": "not_a_list"}  # Invalid structure
+    with pytest.raises(ReQLCompilationError):
+        compiler.extract_fields(dsl)
+
+def test_extract_non_dict_node(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {"field": "valid", "operator": "==", "value": "X", "dtype": "string"},
+            "invalid_rule"  # Non-dict in rules
+        ]
+    }
+    expected = {'valid': 'string'}  # Should skip invalid rule
+    assert compiler.extract_fields(dsl) == expected
+
+
+
+def test_extract_missing_field_name(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {"operator": "==", "value": "X", "dtype": "string"}  # Missing field
+        ]
+    }
+    assert compiler.extract_fields(dsl) == {}  # Should skip invalid rule
+
+def test_extract_empty_input(compiler):
+    assert compiler.extract_fields({}) == {}
+
+
+# ----------------------------
+# validate_fields_against_updates Test Cases
+# ----------------------------
+
+def test_validate_matching_fields(compiler):
+    """Test validation passes with matching fields and compatible types"""
+    extracted = {'price': 'float', 'category': 'string'}
+    db_schema = {
+        'price': {'type': 'float'},
+        'category': {'type': 'varchar'}  # string compatible
+    }
+    # Should not raise
+    compiler.validate_fields_against_updates(extracted, db_schema)
+
+
+def test_validate_missing_field(compiler):
+    """Test detection of fields missing in database"""
+    extracted = {'price': 'float', 'category': 'string'}
+    db_schema = {
+        'price': {'type': 'float'}  # missing category
+    }
+    with pytest.raises(ReQLCompilationError) as excinfo:
+        compiler.validate_fields_against_updates(extracted, db_schema)
+    assert "Missing fields in database: category" in str(excinfo.value)
+
+
+def test_validate_type_mismatch(compiler):
+    """Test detection of incompatible types"""
+    extracted = {'price': 'float', 'category': 'string'}
+    db_schema = {
+        'price': {'type': 'integer'},  # int vs float
+        'category': {'type': 'string'}
+    }
+    with pytest.raises(ReQLCompilationError) as excinfo:
+        compiler.validate_fields_against_updates(extracted, db_schema)
+    assert "Type mismatches: price (filter:float vs db:integer)" in str(excinfo.value)
+
+
+def test_validate_compatible_types(compiler):
+    """Test type compatibility aliases"""
+    extracted = {
+        'id': 'int',
+        'desc': 'string',
+        'value': 'float',
+        'active': 'boolean'
+    }
+    db_schema = {
+        'id': {'type': 'bigint'},  # compatible with int
+        'desc': {'type': 'text'},  # compatible with string
+        'value': {'type': 'decimal'},  # compatible with float
+        'active': {'type': 'bool'}  # compatible with boolean
+    }
+    # Should not raise
+    compiler.validate_fields_against_updates(extracted, db_schema)
+
+
+def test_validate_empty_inputs(compiler):
+    """Test empty inputs don't raise errors"""
+    # Empty extracted fields
+    compiler.validate_fields_against_updates({}, {'field': {'type': 'string'}})
+
+    # Empty db schema with extracted fields should raise
+    with pytest.raises(ReQLCompilationError):
+        compiler.validate_fields_against_updates({'field': 'string'}, {})
+
+
+def test_validate_missing_type_in_db(compiler):
+    """Test handling when db field exists but has no type info"""
+    extracted = {'field': 'string'}
+    db_schema = {'field': {'other_meta': 'value'}}  # missing type
+
+    # Should pass since we can't verify type compatibility
+    compiler.validate_fields_against_updates(extracted, db_schema)
+
+
+def test_validate_multiple_errors(compiler):
+    """Test reporting of multiple validation issues"""
+    extracted = {
+        'missing1': 'string',
+        'mismatch': 'int',
+        'missing2': 'float',
+        'valid': 'string'
+    }
+    db_schema = {
+        'mismatch': {'type': 'string'},  # type mismatch
+        'valid': {'type': 'varchar'}  # valid
+    }
+    with pytest.raises(ReQLCompilationError) as excinfo:
+        compiler.validate_fields_against_updates(extracted, db_schema)
+
+    error_msg = str(excinfo.value)
+    assert "Missing fields in database: missing1, missing2" in error_msg
+    assert "Type mismatches: mismatch (filter:int vs db:string)" in error_msg
+
+
+# ----------------------------
+# _types_compatible Test Cases
+# ----------------------------
+
+def test_type_compatibility_strings(compiler):
+    assert compiler._types_compatible('string', 'varchar') is True
+    assert compiler._types_compatible('string', 'text') is True
+    assert compiler._types_compatible('string', 'int') is False
+
+
+def test_type_compatibility_numbers(compiler):
+    assert compiler._types_compatible('int', 'integer') is True
+    assert compiler._types_compatible('float', 'decimal') is True
+    assert compiler._types_compatible('int', 'float') is False
+
+
+def test_type_compatibility_special_cases(compiler):
+    assert compiler._types_compatible('boolean', 'bool') is True
+    assert compiler._types_compatible('datetime', 'timestamp') is True
+    assert compiler._types_compatible('string', 'datetime') is False
