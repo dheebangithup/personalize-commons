@@ -38,9 +38,9 @@ Purpose:
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "category", "operator": "==", "value": "Books"},
-            {"field": "price", "operator": "<=", "value": 500},
-            {"field": "itemId", "operator": "in", "value": [42, 77]}
+            {"field_name": "category", "operator": "==", "value": "Books"},
+            {"field_name": "price", "operator": "<=", "value": 500},
+            {"field_name": "itemId", "operator": "in", "value": [42, 77]}
         ]
     }
     print(compiler.compile(dsl, allow_context_item=False))
@@ -54,8 +54,8 @@ Purpose:
     dsl_ctx = {
         "op": "AND",
         "rules": [
-            {"field": "brand", "operator": "==", "value": {"$context_item": "brand"}},
-            {"field": "price", "operator": "<=", "value": 100}
+            {"field_name": "brand", "operator": "==", "value": {"$context_item": "brand"}},
+            {"field_name": "price", "operator": "<=", "value": 100}
         ]
     }
     print(compiler.compile(dsl_ctx, allow_context_item=True))
@@ -70,11 +70,11 @@ Purpose:
             {
                 "op": "AND",
                 "rules": [
-                    {"field": "category", "operator": "==", "value": "Books"},
-                    {"field": "price", "operator": "<", "value": 200}
+                    {"field_name": "category", "operator": "==", "value": "Books"},
+                    {"field_name": "price", "operator": "<", "value": 200}
                 ]
             },
-            {"field": "is_available", "operator": "==", "value": True}
+            {"field_name": "is_available", "operator": "==", "value": True}
         ]
     }
     print(compiler.compile(dsl_nested))
@@ -242,16 +242,16 @@ class ReQLFilterCompiler:
         """
         Compile a single rule dict into ReQL fragment.
         Expected rule format:
-          { "field": "category", "operator": "in", "value": ["A","B"] }
+          { "field_name": "category", "operator": "in", "value": ["A","B"] }
         or value can be a context reference:
-          { "field": "brand", "operator":"==", "value": {"$context_item":"brand"} }
+          { "field_name": "brand", "operator":"==", "value": {"$context_item":"brand"} }
         """
-        if 'field' not in rule or 'operator' not in rule or 'value' not in rule:
-            raise ReQLCompilationError("Rule must contain 'field', 'operator', and 'value'")
+        if AppConstants.FIELD_NAME not in rule or AppConstants.OPERATOR not in rule or AppConstants.VALUE not in rule:
+            raise ReQLCompilationError(f"Rule must contain {AppConstants.FIELD_NAME}', '{AppConstants.OPERATOR}', and {AppConstants.VALUE}'")
 
-        prop = rule['field']
-        op = rule['operator']
-        val = rule['value']
+        prop = rule[AppConstants.FIELD_NAME]
+        op = rule[AppConstants.OPERATOR]
+        val = rule[AppConstants.VALUE]
 
         # allow context_item property name like "$context_item.brand" as a special value
         # validate operator allowed for property
@@ -312,10 +312,10 @@ class ReQLFilterCompiler:
 
         Recurses into nested groups.
         """
-        if 'op' not in group or 'rules' not in group:
+        if AppConstants.OP not in group or 'rules' not in group:
             raise ReQLCompilationError("Group must contain 'op' and 'rules'")
 
-        op_raw = group['op']
+        op_raw = group[AppConstants.OP]
         if op_raw not in ('AND', 'OR'):
             raise ReQLCompilationError("Group 'op' must be 'AND' or 'OR'")
 
@@ -378,7 +378,7 @@ class ReQLFilterCompiler:
                 {
                     "op": "AND"/"OR",
                     "rules": [
-                        {"field": "name", "operator": "...", "value": "...", "dtype": "..."},
+                        {"field_name": "name", "operator": "...", "value": "...", "dtype": "..."},
                         {"op": "AND", "rules": [...]},  # Nested groups
                         ...
                     ]
@@ -419,12 +419,12 @@ class ReQLFilterCompiler:
                     except (AttributeError, TypeError):
                         continue  # Skip invalid nodes
             else:  # It's a rule
-                field_name = node.get('field')
+                field_name = node.get(AppConstants.FIELD_NAME)
                 if not field_name:
                     return
 
                 # Get dtype from rule or schema, default to None if not in schema
-                dtype = node.get('dtype')
+                dtype = node.get(AppConstants.DTYPE)
                 if dtype is None and field_name in self.schema:
                     dtype = self.schema[field_name]
 
@@ -533,30 +533,36 @@ if __name__ == '__main__':
     compiler = ReQLFilterCompiler(schema)
 
     dsl ={
-  "op": "AND",
-  "rules": [
-    {
-      "field": "itemId",
-      "operator": "==",
-      "value": 1
-    },
-    {
-      "op": "OR",
-      "rules": [
-        {
-          "field": "price",
-          "operator": "==",
-          "value": 22
-        },
-        {
-          "field": "is_available",
-          "operator": "==",
-          "value": True
-        }
-      ]
-    }
-  ]
-}
+                    "op": "AND",
+                    "rules": [
+                        {
+                            "dtype": "float",
+                            "value": "100.2",
+                            "operator": "==",
+                            "field_name": "price"
+                        },
+                        {
+                            "op": "OR",
+                            "rules": [
+                                {
+                                    "dtype": "string",
+                                    "value": [
+                                        "Books",
+                                        "Pens"
+                                    ],
+                                    "operator": "in",
+                                    "field_name": "category"
+                                },
+                                {
+                                    "dtype": "int",
+                                    "value": "23",
+                                    "operator": "==",
+                                    "field_name": "test"
+                                }
+                            ]
+                        }
+                    ]
+                }
 
     reql = compiler.compile(dsl, allow_context_item=True)
     print(reql)
@@ -565,8 +571,8 @@ if __name__ == '__main__':
     dsl_ctx = {
         "op": "AND",
         "rules": [
-            {"field": "brand", "operator": "==", "value": {"$context_item": "brand"}},
-            {"field": "price", "operator": "<=", "value": 100}
+            {"field_name": "brand", "operator": "==", "value": {"$context_item": "brand"}},
+            {"field_name": "price", "operator": "<=", "value": 100}
         ]
     }
 
@@ -581,11 +587,11 @@ if __name__ == '__main__':
             {
                 "op": "AND",
                 "rules": [
-                    {"field": "category", "operator": "==", "value": "Books"},
-                    {"field": "price", "operator": "<", "value": 200}
+                    {"field_name": "category", "operator": "==", "value": "Books"},
+                    {"field_name": "price", "operator": "<", "value": 200}
                 ]
             },
-            {"field": "is_available", "operator": "==", "value": True}
+            {"field_name": "is_available", "operator": "==", "value": True}
         ]
     }
 

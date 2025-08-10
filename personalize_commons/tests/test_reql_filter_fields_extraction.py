@@ -1,5 +1,6 @@
 import pytest
 
+from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.utils.reql_filter_compiler import ReQLFilterCompiler, ReQLCompilationError
 
 
@@ -27,8 +28,8 @@ def test_extract_basic_fields(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "category", "operator": "==", "value": "Books", "dtype": "string"},
-            {"field": "price", "operator": "<=", "value": 500, "dtype": "float"}
+            {AppConstants.FIELD_NAME: "category", "operator": "==", "value": "Books", "dtype": "string"},
+            {AppConstants.FIELD_NAME: "price", "operator": "<=", "value": 500, "dtype": "float"}
         ]
     }
     expected = {'category': 'string', 'price': 'float'}
@@ -41,11 +42,11 @@ def test_extract_nested_groups(compiler):
             {
                 "op": "AND",
                 "rules": [
-                    {"field": "category", "operator": "==", "value": "Books", "dtype": "string"},
-                    {"field": "brand", "operator": "==", "value": "Nike", "dtype": "string"}
+                    {AppConstants.FIELD_NAME: "category", "operator": "==", "value": "Books", "dtype": "string"},
+                    {AppConstants.FIELD_NAME: "brand", "operator": "==", "value": "Nike", "dtype": "string"}
                 ]
             },
-            {"field": "price", "operator": "<=", "value": 100, "dtype": "float"}
+            {AppConstants.FIELD_NAME: "price", "operator": "<=", "value": 100, "dtype": "float"}
         ]
     }
     expected = {'category': 'string', 'brand': 'string', 'price': 'float'}
@@ -55,8 +56,8 @@ def test_extract_duplicate_fields(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "price", "operator": ">", "value": 100, "dtype": "float"},
-            {"field": "price", "operator": "<", "value": 500, "dtype": "int"}  # Should keep first dtype
+            {AppConstants.FIELD_NAME: "price", "operator": ">", "value": 100, "dtype": "float"},
+            {AppConstants.FIELD_NAME: "price", "operator": "<", "value": 500, "dtype": "int"}  # Should keep first dtype
         ]
     }
     expected = {'price': 'float'}  # First occurrence wins
@@ -70,8 +71,8 @@ def test_extract_missing_dtype_uses_schema(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "category", "operator": "==", "value": "Books"},  # Missing dtype
-            {"field": "price", "operator": "<=", "value": 500, "dtype": "float"}
+            {AppConstants.FIELD_NAME: "category", "operator": "==", "value": "Books"},  # Missing dtype
+            {AppConstants.FIELD_NAME: "price", "operator": "<=", "value": 500, "dtype": "float"}
         ]
     }
     expected = {'category': 'string', 'price': 'float'}  # Gets 'string' from schema
@@ -81,8 +82,8 @@ def test_extract_with_context_item(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "brand", "operator": "==", "value": {"$context_item": "brand"}, "dtype": "string"},
-            {"field": "price", "operator": "<=", "value": 100, "dtype": "float"}
+            {AppConstants.FIELD_NAME: "brand", "operator": "==", "value": {"$context_item": "brand"}, "dtype": "string"},
+            {AppConstants.FIELD_NAME: "price", "operator": "<=", "value": 100, "dtype": "float"}
         ]
     }
     expected = {'brand': 'string', 'price': 'float'}
@@ -92,16 +93,16 @@ def test_extract_deeply_nested(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "category", "operator": "==", "value": "Books", "dtype": "string"},
+            {AppConstants.FIELD_NAME: "category", "operator": "==", "value": "Books", "dtype": "string"},
             {
                 "op": "OR",
                 "rules": [
-                    {"field": "brand", "operator": "==", "value": "Nike", "dtype": "string"},
+                    {AppConstants.FIELD_NAME: "brand", "operator": "==", "value": "Nike", "dtype": "string"},
                     {
                         "op": "AND",
                         "rules": [
-                            {"field": "price", "operator": ">=", "value": 100, "dtype": "float"},
-                            {"field": "rating", "operator": ">=", "value": 4, "dtype": "float"}
+                            {AppConstants.FIELD_NAME: "price", "operator": ">=", "value": 100, "dtype": "float"},
+                            {AppConstants.FIELD_NAME: "rating", "operator": ">=", "value": 4, "dtype": "float"}
                         ]
                     }
                 ]
@@ -129,7 +130,7 @@ def test_extract_non_dict_node(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "valid", "operator": "==", "value": "X", "dtype": "string"},
+            {AppConstants.FIELD_NAME: "valid", "operator": "==", "value": "X", "dtype": "string"},
             "invalid_rule"  # Non-dict in rules
         ]
     }

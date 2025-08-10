@@ -1,5 +1,6 @@
 import pytest
 
+from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.utils.reql_filter_compiler import ReQLFilterCompiler, ReQLCompilationError
 
 
@@ -27,9 +28,9 @@ def test_basic_and_filter(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "category", "operator": "==", "value": "Books"},
-            {"field": "price", "operator": "<=", "value": 500},
-            {"field": "itemId", "operator": "in", "value": [42, 77]}
+            {AppConstants.FIELD_NAME: "category", "operator": "==", "value": "Books"},
+            {AppConstants.FIELD_NAME: "price", "operator": "<=", "value": 500},
+            {AppConstants.FIELD_NAME: "itemId", "operator": "in", "value": [42, 77]}
         ]
     }
     expected = "'category' == \"Books\" AND 'price' <= 500 AND 'itemId' in {42, 77}"
@@ -39,8 +40,8 @@ def test_context_item_allowed(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "brand", "operator": "==", "value": {"$context_item": "brand"}},
-            {"field": "price", "operator": "<=", "value": 100}
+            {AppConstants.FIELD_NAME: "brand", "operator": "==", "value": {"$context_item": "brand"}},
+            {AppConstants.FIELD_NAME: "price", "operator": "<=", "value": 100}
         ]
     }
     expected = "'brand' == context_item[\"brand\"] AND 'price' <= 100"
@@ -53,11 +54,11 @@ def test_nested_groups(compiler):
             {
                 "op": "AND",
                 "rules": [
-                    {"field": "category", "operator": "==", "value": "Books"},
-                    {"field": "price", "operator": "<", "value": 200}
+                    {AppConstants.FIELD_NAME: "category", "operator": "==", "value": "Books"},
+                    {AppConstants.FIELD_NAME: "price", "operator": "<", "value": 200}
                 ]
             },
-            {"field": "is_available", "operator": "==", "value": True}
+            {AppConstants.FIELD_NAME: "is_available", "operator": "==", "value": True}
         ]
     }
     expected = "('category' == \"Books\" AND 'price' < 200) OR 'is_available' == true"
@@ -67,7 +68,7 @@ def test_in_operator_with_strings(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "category", "operator": "in", "value": ["A", "B"]}
+            {AppConstants.FIELD_NAME: "category", "operator": "in", "value": ["A", "B"]}
         ]
     }
     expected = "'category' in {\"A\", \"B\"}"
@@ -78,25 +79,25 @@ def test_in_operator_with_strings(compiler):
 # ----------------------------
 
 def test_unknown_property(compiler):
-    dsl = {"op": "AND", "rules": [{"field": "unknown", "operator": "==", "value": "X"}]}
+    dsl = {"op": "AND", "rules": [{AppConstants.FIELD_NAME: "unknown", "operator": "==", "value": "X"}]}
     with pytest.raises(ReQLCompilationError) as excinfo:
         compiler.compile(dsl)
     assert "Unknown property" in str(excinfo.value)
 
 def test_operator_not_allowed_for_type(compiler):
-    dsl = {"op": "AND", "rules": [{"field": "price", "operator": "contains", "value": "X"}]}
+    dsl = {"op": "AND", "rules": [{AppConstants.FIELD_NAME: "price", "operator": "contains", "value": "X"}]}
     with pytest.raises(ReQLCompilationError) as excinfo:
         compiler.compile(dsl)
     assert "Operator 'contains' not allowed" in str(excinfo.value)
 
 def test_in_operator_requires_list(compiler):
-    dsl = {"op": "AND", "rules": [{"field": "category", "operator": "in", "value": "A"}]}
+    dsl = {"op": "AND", "rules": [{AppConstants.FIELD_NAME: "category", "operator": "in", "value": "A"}]}
     with pytest.raises(ReQLCompilationError) as excinfo:
         compiler.compile(dsl)
     assert "requires a list" in str(excinfo.value)
 
 def test_list_not_allowed_for_eq(compiler):
-    dsl = {"op": "AND", "rules": [{"field": "category", "operator": "==", "value": ["A", "B"]}]}
+    dsl = {"op": "AND", "rules": [{AppConstants.FIELD_NAME: "category", "operator": "==", "value": ["A", "B"]}]}
     with pytest.raises(ReQLCompilationError) as excinfo:
         compiler.compile(dsl)
     assert "does not accept list" in str(excinfo.value)
@@ -105,7 +106,7 @@ def test_context_item_not_allowed(compiler):
     dsl = {
         "op": "AND",
         "rules": [
-            {"field": "brand", "operator": "==", "value": {"$context_item": "brand"}}
+            {AppConstants.FIELD_NAME: "brand", "operator": "==", "value": {"$context_item": "brand"}}
         ]
     }
     with pytest.raises(ReQLCompilationError) as excinfo:
