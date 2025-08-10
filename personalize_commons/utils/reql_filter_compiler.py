@@ -441,64 +441,50 @@ class ReQLFilterCompiler:
 
         return field_types
 
-    def validate_fields_against_updates(
-            self,
-            extracted_fields: Dict[str, str],
-            db_updates: Dict[str, Dict[str, Any]]
-    ) -> None:
+    def validate_extracted_fields(self, extracted_fields: Dict[str, str]) -> None:
         """
-        Validates extracted filter fields against database schema updates.
+        Validates extracted filter fields against the class schema.
 
-        Checks if all fields used in filters exist in the updated database schema
-        and verifies type compatibility where possible.
+        Checks if all fields used in filters exist in the schema and verifies
+        type compatibility where possible.
 
         Args:
             extracted_fields: Field-type mapping from extract_fields()
                              Format: {'field_name': 'dtype', ...}
-            db_updates: Current database schema updates
-                       Format: {
-                           'field_name': {
-                               'type': 'new_type',
-                               'other_metadata': ...
-                           },
-                           ...
-                       }
 
         Raises:
             ReQLCompilationError: If any validation fails, with details including:
-                - Fields missing in database schema
+                - Fields missing in schema
                 - Type incompatibilities (where detectable)
-                - Invalid field specifications
 
         Example:
-            >>> compiler.validate_fields_against_updates(
-            ...     {'price': 'float', 'category': 'string'},
-            ...     {'price': {'type': 'float'}, 'name': {'type': 'string'}}
+            >>> compiler.validate_extracted_fields(
+            ...     {'price': 'float', 'category': 'string'}
             ... )
-            # Raises: ReQLCompilationError("Missing fields in database: category")
+            # Raises if 'category' not in schema or types mismatch
         """
         missing_fields = []
         type_mismatches = []
 
         for field, extracted_type in extracted_fields.items():
             # Check field existence
-            if field not in db_updates:
+            if field not in self.schema:
                 missing_fields.append(field)
                 continue
 
-            # Check type compatibility if db type exists
-            db_type = db_updates[field].get('type')
-            if db_type and not self._types_compatible(extracted_type, db_type):
-                type_mismatches.append((field, extracted_type, db_type))
+            # Check type compatibility
+            schema_type = self.schema[field]
+            if not self._types_compatible(extracted_type, schema_type):
+                type_mismatches.append((field, extracted_type, schema_type))
 
         # Build comprehensive error message if any issues found
         errors = []
         if missing_fields:
-            errors.append(f"Missing fields in database: {', '.join(sorted(missing_fields))}")
+            errors.append(f"Missing fields in schema: {', '.join(sorted(missing_fields))}")
         if type_mismatches:
             mismatch_msgs = [
-                f"{field} (filter:{extr_type} vs db:{db_type})"
-                for field, extr_type, db_type in type_mismatches
+                f"{field} (filter:{extr_type} vs schema:{schema_type})"
+                for field, extr_type, schema_type in type_mismatches
             ]
             errors.append(f"Type mismatches: {', '.join(mismatch_msgs)}")
 

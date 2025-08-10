@@ -152,102 +152,66 @@ def test_extract_empty_input(compiler):
 
 
 # ----------------------------
-# validate_fields_against_updates Test Cases
+
+# ----------------------------
+# validate_extracted_fields Test Cases
 # ----------------------------
 
 def test_validate_matching_fields(compiler):
     """Test validation passes with matching fields and compatible types"""
     extracted = {'price': 'float', 'category': 'string'}
-    db_schema = {
-        'price': {'type': 'float'},
-        'category': {'type': 'varchar'}  # string compatible
-    }
-    # Should not raise
-    compiler.validate_fields_against_updates(extracted, db_schema)
+    # Uses schema from fixture which includes these fields
+    compiler.validate_extracted_fields(extracted)  # Should not raise
 
 
 def test_validate_missing_field(compiler):
-    """Test detection of fields missing in database"""
-    extracted = {'price': 'float', 'category': 'string'}
-    db_schema = {
-        'price': {'type': 'float'}  # missing category
-    }
+    """Test detection of fields missing in schema"""
+    extracted = {'price': 'float', 'invalid_field': 'string'}
     with pytest.raises(ReQLCompilationError) as excinfo:
-        compiler.validate_fields_against_updates(extracted, db_schema)
-    assert "Missing fields in database: category" in str(excinfo.value)
+        compiler.validate_extracted_fields(extracted)
+    assert "Missing fields in schema: invalid_field" in str(excinfo.value)
 
 
 def test_validate_type_mismatch(compiler):
     """Test detection of incompatible types"""
-    extracted = {'price': 'float', 'category': 'string'}
-    db_schema = {
-        'price': {'type': 'integer'},  # int vs float
-        'category': {'type': 'string'}
-    }
+    extracted = {'price': 'int', 'category': 'string'}  # price should be float
     with pytest.raises(ReQLCompilationError) as excinfo:
-        compiler.validate_fields_against_updates(extracted, db_schema)
-    assert "Type mismatches: price (filter:float vs db:integer)" in str(excinfo.value)
+        compiler.validate_extracted_fields(extracted)
+    assert "Type mismatches: price (filter:int vs schema:float)" in str(excinfo.value)
 
 
 def test_validate_compatible_types(compiler):
     """Test type compatibility aliases"""
     extracted = {
-        'id': 'int',
-        'desc': 'string',
-        'value': 'float',
-        'active': 'boolean'
+        'price': 'float',  # exact match
+        'category': 'string'  # exact match
     }
-    db_schema = {
-        'id': {'type': 'bigint'},  # compatible with int
-        'desc': {'type': 'text'},  # compatible with string
-        'value': {'type': 'decimal'},  # compatible with float
-        'active': {'type': 'bool'}  # compatible with boolean
-    }
-    # Should not raise
-    compiler.validate_fields_against_updates(extracted, db_schema)
+    compiler.validate_extracted_fields(extracted)  # Should not raise  # Should not raise
 
 
-def test_validate_empty_inputs(compiler):
-    """Test empty inputs don't raise errors"""
-    # Empty extracted fields
-    compiler.validate_fields_against_updates({}, {'field': {'type': 'string'}})
-
-    # Empty db schema with extracted fields should raise
-    with pytest.raises(ReQLCompilationError):
-        compiler.validate_fields_against_updates({'field': 'string'}, {})
-
-
-def test_validate_missing_type_in_db(compiler):
-    """Test handling when db field exists but has no type info"""
-    extracted = {'field': 'string'}
-    db_schema = {'field': {'other_meta': 'value'}}  # missing type
-
-    # Should pass since we can't verify type compatibility
-    compiler.validate_fields_against_updates(extracted, db_schema)
+def test_validate_empty_input(compiler):
+    """Test empty input doesn't raise errors"""
+    compiler.validate_extracted_fields({})  # Should not raise
 
 
 def test_validate_multiple_errors(compiler):
     """Test reporting of multiple validation issues"""
     extracted = {
         'missing1': 'string',
-        'mismatch': 'int',
+        'price': 'int',  # should be float
         'missing2': 'float',
-        'valid': 'string'
-    }
-    db_schema = {
-        'mismatch': {'type': 'string'},  # type mismatch
-        'valid': {'type': 'varchar'}  # valid
+        'category': 'string'  # valid
     }
     with pytest.raises(ReQLCompilationError) as excinfo:
-        compiler.validate_fields_against_updates(extracted, db_schema)
+        compiler.validate_extracted_fields(extracted)
 
     error_msg = str(excinfo.value)
-    assert "Missing fields in database: missing1, missing2" in error_msg
-    assert "Type mismatches: mismatch (filter:int vs db:string)" in error_msg
+    assert "Missing fields in schema: missing1, missing2" in error_msg
+    assert "Type mismatches: price (filter:int vs schema:float)" in error_msg
 
 
 # ----------------------------
-# _types_compatible Test Cases
+# _types_compatible Test Cases (unchanged)
 # ----------------------------
 
 def test_type_compatibility_strings(compiler):
