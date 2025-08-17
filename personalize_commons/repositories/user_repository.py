@@ -93,7 +93,7 @@ class UserRepository:
                     value2 = None
 
                 operator = operator.lower()
-                dtype=condition.get(AppConstants.DTYPE)
+                dtype=condition.get(AppConstants.DTYPE,AppConstants.STRING)
 
                 if operator in ("=", "<>", "<", "<=", ">", ">="):
                     where_parts.append(f"{field} {operator} ?")

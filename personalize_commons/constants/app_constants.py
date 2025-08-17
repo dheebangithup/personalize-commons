@@ -1,4 +1,5 @@
 class AppConstants:
+    STRING = 'string'
     VALUE = 'value'
     OPERATOR = 'operator'
     RULES = 'rules'
