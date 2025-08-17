@@ -93,28 +93,29 @@ class UserRepository:
                     value2 = None
 
                 operator = operator.lower()
+                dtype=condition.get(AppConstants.DTYPE)
 
                 if operator in ("=", "<>", "<", "<=", ">", ">="):
                     where_parts.append(f"{field} {operator} ?")
-                    params.append(self._convert_to_dynamodb_type(value))
+                    params.append(self._convert_value_by_dtype(value,dtype))
 
                 elif operator == "begins_with":
                     where_parts.append(f"begins_with({field}, ?)")
-                    params.append(self._convert_to_dynamodb_type(value))
+                    params.append(self._convert_value_by_dtype(value,dtype))
 
                 elif operator == "contains":
                     where_parts.append(f"contains({field}, ?)")
-                    params.append(self._convert_to_dynamodb_type(value))
+                    params.append(self._convert_value_by_dtype(value,dtype))
 
                 elif operator == "not_contains":
                     where_parts.append(f"NOT contains({field}, ?)")
-                    params.append(self._convert_to_dynamodb_type(value))
+                    params.append(self._convert_value_by_dtype(value,dtype))
 
                 elif operator == "between" and value2 is not None:
                     where_parts.append(f"{field} BETWEEN ? AND ?")
                     params.extend([
-                        self._convert_to_dynamodb_type(value),
-                        self._convert_to_dynamodb_type(value2)
+                        self._convert_value_by_dtype(value,dtype),
+                        self._convert_value_by_dtype(value,dtype)
                     ])
 
                 elif operator == "in" and isinstance(value, (list, tuple)):
@@ -125,7 +126,7 @@ class UserRepository:
                 else:
                     # Default to equals if operator is not recognized
                     where_parts.append(f"{field} = ?")
-                    params.append(self._convert_to_dynamodb_type(condition))
+                    params.append(self._convert_value_by_dtype(value,dtype))
 
             if not where_parts:
                 raise ValueError("No valid conditions provided")
@@ -197,6 +198,31 @@ class UserRepository:
             return {'M': {k: self._convert_to_dynamodb_type(v) for k, v in value.items()}}
         else:
             return {'S': str(value)}
+
+
+    def _convert_value_by_dtype(self,value: Any, dtype: str) -> Dict[str, Any]:
+        """
+        Convert a Python value to a DynamoDB PartiQL parameter based on dtype.
+
+        Args:
+            value: The actual value to convert.
+            dtype: Data type as a string. Supported: "integer", "float", "string", "boolean"
+
+        Returns:
+            Dict[str, Any]: DynamoDB PartiQL parameter dictionary.
+        """
+        dtype = dtype.lower()
+
+        if dtype in ("integer", "int"):
+            return {'N': str(int(value))}
+        elif dtype in ("float", "double"):
+            return {'N': str(float(value))}
+        elif dtype == "string":
+            return {'S': str(value)}
+        elif dtype in ("bool", "boolean"):
+            return {'BOOL': bool(value)}
+        else:
+            raise ValueError(f"Unsupported dtype: {dtype}")
 
     def add_user(self, item:dict[str,Any]) -> None:
         """Add a new user to the DynamoDB table."""
