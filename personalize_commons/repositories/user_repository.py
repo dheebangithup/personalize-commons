@@ -79,6 +79,7 @@ class UserRepository:
 
             for field, condition in conditions.items():
                 # Handle both ConditionValue objects and raw values
+                dtype=None
                 if hasattr(condition, 'dict'):  # It's a Pydantic model
                     condition = condition.dict()
 
@@ -87,13 +88,15 @@ class UserRepository:
                     operator = condition.get('operator', '=')
                     value = condition.get('value')
                     value2 = condition.get('value2')
+                    dtype = condition.get(AppConstants.DTYPE)
                 else:
                     operator = '='
                     value = condition
                     value2 = None
+                    dtype=AppConstants.STRING
 
                 operator = operator.lower()
-                dtype=condition.get(AppConstants.DTYPE,AppConstants.STRING)
+
 
                 if operator in ("=", "<>", "<", "<=", ">", ">="):
                     where_parts.append(f"{field} {operator} ?")
