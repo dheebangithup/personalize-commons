@@ -257,3 +257,75 @@ class UserRepository:
             return response.get('Items', [])
         except ClientError as e:
             raise e
+
+    def _build_partiql_query(self, rules: Dict[str, Any]) -> str:
+        """
+        Recursively build a DynamoDB PartiQL WHERE clause from nested rules JSON.
+
+        Args:
+            rules (Dict[str, Any]): Nested JSON filter rules.
+
+        Returns:
+            str: Fully constructed PartiQL WHERE clause string.
+        """
+
+        def typecast_value(value: Any, dtype: str, for_in: bool = False) -> str:
+            """Typecast Python value to PartiQL literal."""
+            dtype = dtype.lower()
+
+            if isinstance(value, list):
+                # Format list properly: ('a','b','c')
+                formatted_list = ", ".join(typecast_value(v, dtype, for_in=True) for v in value)
+                return f"({formatted_list})"
+
+            if dtype in ("string",):
+                return f"'{value}'"
+            elif dtype in ("int", "integer"):
+                return str(int(value))
+            elif dtype in ("float", "double"):
+                # avoid unnecessary .0 for integers
+                return str(int(value)) if float(value).is_integer() else str(float(value))
+            else:
+                raise ValueError(f"Unsupported dtype: {dtype}")
+
+        def map_operator(op: str) -> str:
+            """Map JSON operator to PartiQL operator."""
+            mapping = {
+                "==": "=",
+                "!=": "<>",
+                ">=": ">=",
+                "<=": "<=",
+                ">": ">",
+                "<": "<",
+                "in": "IN"
+            }
+            return mapping.get(op.lower(), op)
+
+        def process_rule(rule: Dict[str, Any]) -> str:
+            if "op" in rule and "rules" in rule:
+                # Nested group
+                subclauses = [process_rule(r) for r in rule["rules"]]
+                return "(" + f" {rule['op'].upper()} ".join(subclauses) + ")"
+            else:
+                # Simple condition
+                field = rule["field_name"]
+                operator = map_operator(rule["operator"])
+                value = rule["value"]
+                dtype = rule["dtype"]
+
+                if operator == "IN":
+                    return f"{field} IN {typecast_value(value, dtype)}"
+                else:
+                    return f"{field} {operator} {typecast_value(value, dtype)}"
+
+        return process_rule(rules)
+
+    def query_with_rules(self, rules: Dict[str, Any],tenant_id:str) -> QueryResponse:
+        """
+        Build and execute a PartiQL query from nested filter rules JSON.
+        """
+        where_clause = self._build_partiql_query(rules)
+        statement = f"SELECT * FROM {self.table_name} WHERE tenant_id ={tenant_id} AND {where_clause}"
+        logger.info(f"Generated PartiQL: {statement}")
+        items = self.execute_partiql(statement)
+        return QueryResponse(users=items, count=len(items))

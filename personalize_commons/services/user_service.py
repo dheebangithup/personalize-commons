@@ -24,6 +24,17 @@ class UserService:
             logger.error(f"Error querying users: {str(e)}", exc_info=True)
             return QueryResponse(count=0,users=[])
 
+    def query_users_by_rules(self, rules: Dict[str, Any],tenant_id:str) -> QueryResponse:
+        """
+        Query users with flexible conditions using the repository.
+        Returns a QueryResponse containing items and count
+        """
+        try:
+            return self.user_repo.query_with_rules(rules,tenant_id=tenant_id)
+        except Exception as e:
+            logger.error(f"Error querying users: {str(e)}", exc_info=True)
+            return QueryResponse(count=0,users=[])
+
 
     def get_all_users_by_tenant(self, tenant_id: str) -> QueryResponse:
         try:
