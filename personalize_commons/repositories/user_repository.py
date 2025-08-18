@@ -325,7 +325,7 @@ class UserRepository:
         Build and execute a PartiQL query from nested filter rules JSON.
         """
         where_clause = self._build_partiql_query(rules)
-        statement = f"SELECT * FROM {self.table_name} WHERE tenant_id ={tenant_id} AND {where_clause}"
+        statement = f"SELECT * FROM {self.table_name} WHERE tenant_id = '{tenant_id}' AND {where_clause}"
         logger.info(f"Generated PartiQL: {statement}")
         items = self.execute_partiql(statement)
         return QueryResponse(users=items, count=len(items))

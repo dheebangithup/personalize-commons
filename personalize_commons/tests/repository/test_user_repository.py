@@ -84,6 +84,38 @@ def test_nested_and_or(repo):
     expected = "(price >= 100 AND (category IN ('Sweets') OR brand = 'Puma'))"
     assert query == expected
 
+def test_nested_and_or_root_or(repo):
+    rules = {
+        "op": "OR",
+        "rules": [
+            {
+                "field_name": "price",
+                "operator": ">=",
+                "value": 100,
+                "dtype": "float"
+            },
+            {
+                "op": "OR",
+                "rules": [
+                    {
+                        "field_name": "category",
+                        "operator": "in",
+                        "value": ["Sweets"],
+                        "dtype": "string"
+                    },
+                    {
+                        "field_name": "brand",
+                        "operator": "==",
+                        "value": "Puma",
+                        "dtype": "string"
+                    }
+                ]
+            }
+        ]
+    }
+    query = repo._build_partiql_query(rules)
+    expected = "(price >= 100 OR (category IN ('Sweets') OR brand = 'Puma'))"
+    assert query == expected
 
 def test_invalid_dtype(repo):
     rules = {
