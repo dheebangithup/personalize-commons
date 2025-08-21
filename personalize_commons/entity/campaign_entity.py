@@ -36,6 +36,8 @@ class CampaignEntity(BaseModel):
     message_template: dict[str, Any]
     tenant_id: str
     item_id: Optional[str] = None
+    logic:Optional[str]=None
+    scenario:Optional[str]=None
 
     # Status and metadata
     status: CampaignStatus = CampaignStatus.DRAFT
