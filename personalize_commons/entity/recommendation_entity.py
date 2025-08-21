@@ -33,12 +33,14 @@ class Flow(str, Enum):
 
 
 class RecommendationMetrics(BaseModel):
+    segment_matched_users: int = Field(..., description="Number of users matched to the target segment",
+                                       alias="segment_matched_users")
+    default_users: int = Field(..., description="if target segment is not provided, to fetch the default users from DB",
+                               alias="default_users")
     ai_recommended_items: int = Field(..., description="Number of items recommended",alias="ai_recommended_items")
     ai_recommended_users: int = Field(..., description="Number of items recommended",alias="ai_recommended_users")
     recommended_users: int = Field(..., description="Number of users recommended",alias="recommended_users")
     recommended_items: int = Field(..., description="Number of items recommended",alias="recommended_items")
-    segment_matched_users: int = Field(..., description="Number of users matched to the target segment",alias="segment_matched_users")
-    default_users: int = Field(..., description="if target segment is not provided, to fetch the default users from DB",alias="default_users")
     failed_recommendations: int = Field(..., description="Number of users failed in ai",alias="failed_recommendations")
     message_success_count: int = Field(..., description="Number of successfully processed messages",alias="message_success_count")
     message_failed_count: int = Field(..., description="Number of failed messages",alias="message_failed_count")
