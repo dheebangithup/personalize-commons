@@ -47,3 +47,9 @@ class AppConstants:
     IS_EMAIL_VERIFIED='email_verified'
 
     SUPPORTED_DATATYPES=['int','float','string','datetime','boolean']
+    SCENARIOS='scenarios'
+    LOGICS='logics'
+    UNIVERSAL='universal'
+    DOMAINS_SPECIFIC='domain_specific'
+    DESCRIPTION='description'
+    TYPE='type'
