@@ -53,3 +53,4 @@ class AppConstants:
     DOMAINS_SPECIFIC='domain_specific'
     DESCRIPTION='description'
     TYPE='type'
+    NAME='name'
