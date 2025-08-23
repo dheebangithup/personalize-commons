@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from personalize_commons.repositories.user_repository import UserRepository
@@ -27,6 +29,16 @@ def test_simple_rule(repo):
     }
     query = repo._build_partiql_query(rules)
     assert query == "price >= 50"
+
+def test_not_in_rule(repo):
+    rules = {
+        "field_name": "name",
+        "operator": "not in",
+        "value": [50,100],
+        "dtype": "string"
+    }
+    query = repo._build_partiql_query(rules)
+    assert query == "name NOT IN ('50', '100')"
 
 
 def test_string_equals(repo):
@@ -126,3 +138,13 @@ def test_invalid_dtype(repo):
     }
     with pytest.raises(ValueError):
         repo._build_partiql_query(rules)
+
+def test_string_json(repo):
+    rules ={'op': 'AND', 'rules':
+        [
+            {'dtype': 'int', 'value': '40', 'operator': '<=', 'field_name': 'age'},
+            {'dtype': 'string', 'value': 'Chennai', 'operator': '==', 'field_name': 'location'},
+            {'op': 'OR', 'rules': [{'dtype': 'int', 'value': Decimal('10'), 'operator': '>=', 'field_name': 'age'}]}
+        ]}
+    query = repo._build_partiql_query(rules)
+    print(query)

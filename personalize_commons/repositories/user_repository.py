@@ -54,99 +54,6 @@ class UserRepository:
             logger.error(f"Parameters: {parameters}")
             raise
 
-    def query_users(self, conditions: Dict[str, Any],tenant_id:str) -> QueryResponse:
-        """
-        Query users with flexible conditions using PartiQL
-
-        Args:
-            conditions: Dictionary of field conditions with operators
-
-        Returns:
-            Dictionary containing query results and metadata
-            :param conditions:
-            :param tenant_id:
-        """
-        try:
-            if not conditions:
-                raise ValueError("At least one condition is required")
-                # Always include tenant_id in the query
-            if AppConstants.TENANT_ID not in conditions:
-                conditions[AppConstants.TENANT_ID] = tenant_id
-
-            # Build WHERE clause with proper parameter placeholders
-            where_parts = []
-            params = []
-
-            for field, condition in conditions.items():
-                # Handle both ConditionValue objects and raw values
-                dtype=None
-                if hasattr(condition, 'dict'):  # It's a Pydantic model
-                    condition = condition.dict()
-
-                # If it's a dict but not from Pydantic
-                if isinstance(condition, dict):
-                    operator = condition.get('operator', '=')
-                    value = condition.get('value')
-                    value2 = condition.get('value2')
-                    dtype = condition.get(AppConstants.DTYPE)
-                else:
-                    operator = '='
-                    value = condition
-                    value2 = None
-                    dtype=AppConstants.STRING
-
-                operator = operator.lower()
-
-
-                if operator in ("=", "<>", "<", "<=", ">", ">="):
-                    where_parts.append(f"{field} {operator} ?")
-                    params.append(self._convert_value_by_dtype(value,dtype))
-
-                elif operator == "begins_with":
-                    where_parts.append(f"begins_with({field}, ?)")
-                    params.append(self._convert_value_by_dtype(value,dtype))
-
-                elif operator == "contains":
-                    where_parts.append(f"contains({field}, ?)")
-                    params.append(self._convert_value_by_dtype(value,dtype))
-
-                elif operator == "not_contains":
-                    where_parts.append(f"NOT contains({field}, ?)")
-                    params.append(self._convert_value_by_dtype(value,dtype))
-
-                elif operator == "between" and value2 is not None:
-                    where_parts.append(f"{field} BETWEEN ? AND ?")
-                    params.extend([
-                        self._convert_value_by_dtype(value,dtype),
-                        self._convert_value_by_dtype(value,dtype)
-                    ])
-
-                elif operator == "in" and isinstance(value, (list, tuple)):
-                    placeholders = ", ".join(["?" for _ in value])
-                    where_parts.append(f"{field} IN ({placeholders})")
-                    params.extend([self._convert_to_dynamodb_type(v) for v in value])
-
-                else:
-                    # Default to equals if operator is not recognized
-                    where_parts.append(f"{field} = ?")
-                    params.append(self._convert_value_by_dtype(value,dtype))
-
-            if not where_parts:
-                raise ValueError("No valid conditions provided")
-
-            where_clause = " AND ".join(where_parts)
-            query = f"SELECT * FROM {self.table_name} WHERE {where_clause}"
-
-            logger.info(f"Executing query: {query}")
-            logger.info(f"Query parameters: {params}")
-
-            items = self.execute_partiql(query, params)
-
-            return QueryResponse(users=items, count=len(items))
-
-        except Exception as e:
-            logger.error(f"Error querying users: {str(e)}", exc_info=True)
-            raise
 
     def get_all_users_by_tenant(self, tenant_id: str) -> QueryResponse:
         """
@@ -297,7 +204,8 @@ class UserRepository:
                 "<=": "<=",
                 ">": ">",
                 "<": "<",
-                "in": "IN"
+                "in": "IN",
+                "not in": "NOT IN"
             }
             return mapping.get(op.lower(), op)
 

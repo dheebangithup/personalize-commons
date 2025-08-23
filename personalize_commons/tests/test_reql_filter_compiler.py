@@ -74,6 +74,16 @@ def test_in_operator_with_strings(compiler):
     expected = "'category' in {\"A\", \"B\"}"
     assert compiler.compile(dsl) == expected
 
+def test_not_in_operator_with_strings(compiler):
+    dsl = {
+        "op": "AND",
+        "rules": [
+            {AppConstants.FIELD_NAME: "category", "operator": "not in", "value": ["A", "B"]}
+        ]
+    }
+    expected = "'category' not in {\"A\", \"B\"}"
+    assert compiler.compile(dsl) == expected
+
 # ----------------------------
 # Negative Test Cases
 # ----------------------------

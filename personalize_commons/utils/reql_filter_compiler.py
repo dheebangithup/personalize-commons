@@ -126,7 +126,7 @@ class ReQLFilterCompiler:
 
     # operator sets mapped to supported datatypes
     OPERATORS_BY_TYPE = {
-        'string': {'==', '!=', 'in', 'not in', 'contains', 'startsWith'},
+        'string': {'==', '!=', 'in', 'not in'},
         'int': {'==', '!=', '<', '<=', '>', '>=', 'in', 'not in'},
         'float': {'==', '!=', '<', '<=', '>', '>=', 'in', 'not in'},
         'datetime': {'<', '<=', '>', '>=', '==', '!='},
@@ -268,16 +268,14 @@ class ReQLFilterCompiler:
         #  - context item: context_item["prop"]
         #  - size / set intersection not required here since "set" dtype is not in SUPPORTED_DATATYPES
         if op in ('in', 'not in'):
-            # value must be list
             if not isinstance(val, (list, tuple)):
                 raise ReQLCompilationError(f"Operator '{op}' requires a list of values")
             multi = self._format_multi_values(val, dtype)
-            base = f"{self._format_property(prop)} in {multi}"
             if op == 'in':
-                return base
-            else:
-                return f"not ({base})"
-
+                return f"{self._format_property(prop)} in {multi}"
+            else:  # "not in"
+                return f"{self._format_property(prop)} not in {multi}"
+        # right now below operators we are not supporting
         if op in ('contains', 'startsWith'):
             # treat as function style calls (string functions)
             if dtype != 'string':
@@ -536,10 +534,10 @@ if __name__ == '__main__':
                     "op": "AND",
                     "rules": [
                         {
-                            "dtype": "float",
-                            "value": "100.2",
-                            "operator": "==",
-                            "field_name": "price"
+                            "dtype": "string",
+                            "value": "abc",
+                            "operator": "startsWith",
+                            "field_name": "category"
                         },
                         {
                             "op": "OR",
@@ -553,50 +551,15 @@ if __name__ == '__main__':
                                     "operator": "in",
                                     "field_name": "category"
                                 },
-                                {
-                                    "dtype": "int",
-                                    "value": "23",
-                                    "operator": "==",
-                                    "field_name": "test"
-                                }
+
                             ]
                         }
                     ]
                 }
 
-    reql = compiler.compile(dsl, allow_context_item=True)
+    reql = compiler.compile(dsl, allow_context_item=False)
     print(reql)
     # Output: "'category' == "Books" AND 'price' <= 500 AND 'itemId' in {"item-42", "item-77"}"
 
-    dsl_ctx = {
-        "op": "AND",
-        "rules": [
-            {"field_name": "brand", "operator": "==", "value": {"$context_item": "brand"}},
-            {"field_name": "price", "operator": "<=", "value": 100}
-        ]
-    }
-
-    # compile with context allowed (RecommendItemsToItem)
-    reql2 = compiler.compile(dsl_ctx, allow_context_item=True)
-    print(reql2)
-    # "'brand' == context_item["brand"] AND 'price' <= 100"
-
-    dsl_nested = {
-        "op": "OR",
-        "rules": [
-            {
-                "op": "AND",
-                "rules": [
-                    {"field_name": "category", "operator": "==", "value": "Books"},
-                    {"field_name": "price", "operator": "<", "value": 200}
-                ]
-            },
-            {"field_name": "is_available", "operator": "==", "value": True}
-        ]
-    }
-
-    reql3 = compiler.compile(dsl_nested, allow_context_item=False)
-    print(reql3)
-    # "('category' == "Books" AND 'price' < 200) OR 'is_available' == true"
 
 
