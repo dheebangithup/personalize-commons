@@ -1,14 +1,13 @@
 import base64
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
-from personalize_commons.utils.datetime_utils import ist_now_iso, ist_now
+from personalize_commons.utils.datetime_utils import ist_now
 
 '''
 PK :tenant_id
@@ -16,12 +15,15 @@ SK : recommendation_id
 LSI: StatusIndex,CreatedAtIndex
 
 '''
+
+
 class RecommendationStatus(str, Enum):
     """Status of the recommendation job."""
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
-    RECOM_DONE="RECOMMENDATION_DONE"
+    RECOM_DONE = "RECOMMENDATION_DONE"
+
 
 class Flow(str, Enum):
     RECOMMENDATION_TRIGGERED = "recommendation.triggered"
@@ -31,19 +33,19 @@ class Flow(str, Enum):
     NOTIFY_FAILED = "recommendation.notify.failed"
 
 
-
 class RecommendationMetrics(BaseModel):
     segment_matched_users: int = Field(..., description="Number of users matched to the target segment",
                                        alias="segment_matched_users")
     default_users: int = Field(..., description="if target segment is not provided, to fetch the default users from DB",
                                alias="default_users")
-    ai_recommended_items: int = Field(..., description="Number of items recommended",alias="ai_recommended_items")
-    ai_recommended_users: int = Field(..., description="Number of items recommended",alias="ai_recommended_users")
-    recommended_users: int = Field(..., description="Number of users recommended",alias="recommended_users")
-    recommended_items: int = Field(..., description="Number of items recommended",alias="recommended_items")
-    failed_recommendations: int = Field(..., description="Number of users failed in ai",alias="failed_recommendations")
-    message_success_count: int = Field(..., description="Number of successfully processed messages",alias="message_success_count")
-    message_failed_count: int = Field(..., description="Number of failed messages",alias="message_failed_count")
+    ai_recommended_items: int = Field(..., description="Number of items recommended", alias="ai_recommended_items")
+    ai_recommended_users: int = Field(..., description="Number of items recommended", alias="ai_recommended_users")
+    recommended_users: int = Field(..., description="Number of users recommended", alias="recommended_users")
+    recommended_items: int = Field(..., description="Number of items recommended", alias="recommended_items")
+    failed_recommendations: int = Field(..., description="Number of users failed in ai", alias="failed_recommendations")
+    message_success_count: int = Field(..., description="Number of successfully processed messages",
+                                       alias="message_success_count")
+    message_failed_count: int = Field(..., description="Number of failed messages", alias="message_failed_count")
 
     @staticmethod
     def empty():
@@ -58,6 +60,8 @@ class RecommendationMetrics(BaseModel):
             message_success_count=0,
             message_failed_count=0,
         )
+
+
 class RecommendationEntity(BaseModel):
     """
     Entity representing a recommendation job in the system.
@@ -68,11 +72,12 @@ class RecommendationEntity(BaseModel):
     tenant_id: str = Field(..., description="Tenant identifier (partition key)")
     recommendation_id: str = Field(..., description="Unique identifier for the recommendation job (sort key)")
     campaign_id: str = Field(..., description="ID of the campaign this recommendation is for")
-    status: RecommendationStatus = Field(default=RecommendationStatus.RUNNING, description="Current status of the recommendation job")
-    flows:list[Flow]=Field(...,description="List of flows this recommendation job is for")
+    status: RecommendationStatus = Field(default=RecommendationStatus.RUNNING,
+                                         description="Current status of the recommendation job")
+    flows: list[Flow] = Field(..., description="List of flows this recommendation job is for")
     # Recommendation results
     recom_file_key: Optional[str] = Field(None, description="s3 key of the recommendation file")
-
+    user_ids: Optional[List[str]] = Field(None, description="List of user ids this recommendation job is for")
     # Metrics
     metrics: RecommendationMetrics = Field(None, description="Recommendation metrics")
 
@@ -81,8 +86,8 @@ class RecommendationEntity(BaseModel):
     recombee_errors: Optional[str] = Field(None, description="recombee api errors")
 
     # Timestamps
-    created_at: datetime = Field( description="When the recommendation job was created")
-    updated_at: datetime = Field( description="When the recommendation job was last updated")
+    created_at: datetime = Field(description="When the recommendation job was created")
+    updated_at: datetime = Field(description="When the recommendation job was last updated")
     completed_at: Optional[datetime] = Field(None, description="When the recommendation job was completed")
 
     # Additional metadata
@@ -126,7 +131,7 @@ class RecommendationEntity(BaseModel):
         #     item[DBConstants.COMPLETED_AT] = to_ist_iso(item[DBConstants.COMPLETED_AT])
 
         if 'recom_file_key' in item and item['recom_file_key'] is not None:
-            item['recom_file_key'] =  base64.urlsafe_b64encode(str(item['recom_file_key']).encode())
+            item['recom_file_key'] = base64.urlsafe_b64encode(str(item['recom_file_key']).encode())
         # Convert ISO format strings back to datetime objects
         for field in ['created_at', 'updated_at', 'completed_at']:
             if field in item and item[field] is not None and isinstance(item[field], str):
