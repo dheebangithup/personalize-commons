@@ -11,3 +11,4 @@ class DBConstants:
     UPDATED_AT = 'updated_at'
     COMPLETED_AT = 'completed_at'
     STATUS = 'status'
+    MONTH = 'month'
