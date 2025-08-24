@@ -1,13 +1,15 @@
+import os
+
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.utils.datetime_utils import ist_now
 
 
-class InteractionRepository:
-    def __init__(self,  client,table):
+class InteractionTrackingRepository:
+    def __init__(self,  client):
         import boto3
         self.dynamodb = client
-        self.table_name=table
+        self.table_name=os.getenv('INTRACTION_TRACKING_REPOSITORY_TABLE','intraction_tracking')
 
 
     def update_interactions(self, tenant_id: str, event_increments: dict, month: str = None):
