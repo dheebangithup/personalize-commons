@@ -32,7 +32,7 @@ class CampaignEntity(BaseModel):
     campaign_id: str = Field(default_factory=lambda: f"campaign_{uuid4()}")
     campaign_name: str = Field(..., max_length=255)
     industry_type: str = Field(..., max_length=100)
-    target_segment: Dict[str, Any] = Field(..., description="Serialized QueryRequest")
+    target_segment: Optional[Dict[str, Any]] = Field(..., description="Serialized QueryRequest")
     message_template: dict[str, Any]
     tenant_id: str
     item_id: Optional[str] = None
