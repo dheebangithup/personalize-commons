@@ -77,7 +77,6 @@ class RecommendationEntity(BaseModel):
     flows: list[Flow] = Field(..., description="List of flows this recommendation job is for")
     # Recommendation results
     recom_file_key: Optional[str] = Field(None, description="s3 key of the recommendation file")
-    user_ids: Optional[List[str]] = Field(None, description="List of user ids this recommendation job is for")
     # Metrics
     metrics: RecommendationMetrics = Field(None, description="Recommendation metrics")
 
