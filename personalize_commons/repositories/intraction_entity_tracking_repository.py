@@ -19,32 +19,29 @@ class InteractionTrackingRepository:
         self.table_name = os.getenv('INTERACTION_TRACKING_TABLE', 'interaction_tracking')
 
     def update_interactions(self, tenant_id: str, event_increments: dict, month: str = None):
-        """
-        Increments one or more interaction counters atomically.
-        Example event_increments: {"purchase": 5, "add_to_cart": 2}
-        Creates the row if not present.
-        """
         if month is None:
             month = ist_now().strftime("%Y-%m")
 
         if not event_increments:
             return {"ok": True}
 
-        update_parts = []
+        # Build update expressions for each event type
+        update_expr_parts = []
         expr_attr_names = {}
         expr_attr_values = {":zero": {"N": "0"}}
 
         for i, (event_type, value) in enumerate(event_increments.items()):
-            placeholder_name = f"#e{i}"
-            placeholder_value = f":v{i}"
+            event_alias = f"#evt{i}"
+            value_alias = f":val{i}"
 
-            update_parts.append(
-                f"interactions.{placeholder_name} = if_not_exists(interactions.{placeholder_name}, :zero) + {placeholder_value}"
+            expr_attr_names[event_alias] = event_type
+            expr_attr_values[value_alias] = {"N": str(value)}
+
+            update_expr_parts.append(
+                f"interactions.{event_alias} = if_not_exists(interactions.{event_alias}, :zero) + {value_alias}"
             )
-            expr_attr_names[placeholder_name] = event_type
-            expr_attr_values[placeholder_value] = {"N": str(value)}
 
-        update_expr = "SET " + ", ".join(update_parts)
+        update_expr = "SET " + ", ".join(update_expr_parts)
 
         try:
             response = self.dynamodb.update_item(
