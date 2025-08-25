@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from botocore.exceptions import ClientError
 
@@ -287,4 +287,75 @@ class RecommendationRepository:
 
         except Exception as e:
             logger.error(f"Error getting recommendations: {str(e)}", exc_info=True)
+            raise
+
+    def get_recommendations_by_date_range(
+            self,
+            tenant_id: str,
+            start_date: datetime,
+            end_date: datetime,
+            status: str = None
+    ) -> List[RecommendationEntity]:
+        """
+        Get all recommendations within a date range without pagination.
+
+        Args:
+            tenant_id: ID of the tenant
+            start_date: Start date for filtering (inclusive)
+            end_date: End date for filtering (inclusive)
+            status: Optional status to filter recommendations
+
+        Returns:
+            List of RecommendationEntity objects within the date range
+
+        Raises:
+            Exception: For DynamoDB errors
+        """
+        try:
+            # Adjust end_date to include the entire end day
+            end_date = end_date + timedelta(days=1)
+            
+            # Base query parameters
+            key_condition = 'tenant_id = :tenant_id AND #created_at BETWEEN :start_date AND :end_date'
+            expr_attr_values = {
+                ':tenant_id': tenant_id,
+                ':start_date': start_date.isoformat(),
+                ':end_date': end_date.isoformat()
+            }
+            expr_attr_names = {'#created_at': 'created_at'}
+            
+            # Add status filter if provided
+            if status:
+                key_condition += ' AND #status = :status'
+                expr_attr_names['#status'] = 'status'
+                expr_attr_values[':status'] = status
+
+            # Initial query parameters
+            query_params = {
+                'IndexName': DBConstants.CREATED_AT_INDEX,
+                'KeyConditionExpression': key_condition,
+                'ExpressionAttributeNames': expr_attr_names,
+                'ExpressionAttributeValues': expr_attr_values,
+                'ScanIndexForward': False  # Most recent first
+            }
+
+            items = []
+            last_evaluated_key = None
+
+            # Handle pagination to get all results
+            while True:
+                if last_evaluated_key:
+                    query_params['ExclusiveStartKey'] = last_evaluated_key
+                
+                response = self.table.query(**query_params)
+                items.extend(response.get('Items', []))
+                
+                last_evaluated_key = response.get('LastEvaluatedKey')
+                if not last_evaluated_key:
+                    break
+
+            return [RecommendationEntity.from_dynamodb_item(item) for item in items]
+
+        except Exception as e:
+            logger.error(f"Error getting recommendations by date range: {str(e)}", exc_info=True)
             raise
