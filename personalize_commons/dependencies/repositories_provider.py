@@ -52,7 +52,7 @@ def get_recommendation_repository():
         __recommendation_repository = RecommendationRepository(resource=get_dynamodb_resource())
     return __recommendation_repository
 
-def get_intraction_tracking_repository()->InteractionTrackingRepository:
+def get_interaction_tracking_repository()->InteractionTrackingRepository:
     global __intraction_tracking_repository
     if __intraction_tracking_repository is None:
         __intraction_tracking_repository=InteractionTrackingRepository(client=get_dynamodb_client())
