@@ -31,19 +31,21 @@ class InteractionTrackingRepository:
             return {"ok": True}
 
         # Build UpdateExpression dynamically
-        update_expr = "ADD "
+        update_parts = []
         expr_attr_names = {}
-        expr_attr_values = {}
-        updates = []
+        expr_attr_values = {":zero": {"N": "0"}}
 
         for i, (event_type, value) in enumerate(event_increments.items()):
             placeholder_name = f"#e{i}"
             placeholder_value = f":v{i}"
-            updates.append(f"interactions.{placeholder_name} {placeholder_value}")
+
+            update_parts.append(
+                f"interactions.{placeholder_name} = if_not_exists(interactions.{placeholder_name}, :zero) + {placeholder_value}"
+            )
             expr_attr_names[placeholder_name] = event_type
             expr_attr_values[placeholder_value] = {"N": str(value)}
 
-        update_expr += ", ".join(updates)
+        update_expr = "SET " + ", ".join(update_parts)
 
         response = self.dynamodb.update_item(
             TableName=self.table_name,
@@ -56,6 +58,7 @@ class InteractionTrackingRepository:
             ExpressionAttributeValues=expr_attr_values,
             ReturnValues="UPDATED_NEW"
         )
+
         return response.get("Attributes", {})
 
     def increment_unique_users(self, tenant_id: str, month: str = None, by: int = 1):
