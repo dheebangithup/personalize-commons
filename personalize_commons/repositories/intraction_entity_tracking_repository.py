@@ -22,7 +22,7 @@ class InteractionTrackingRepository:
         """
         Increments one or more interaction counters atomically.
         Example event_increments: {"purchase": 5, "add_to_cart": 2}
-        Creates the row if not present.
+        Creates the row if not present, and initializes the interactions map.
         """
         if month is None:
             month = ist_now().strftime("%Y-%m")
@@ -31,11 +31,16 @@ class InteractionTrackingRepository:
             # no-op safe-guard
             return {"ok": True}
 
-        # Build UpdateExpression dynamically
-        update_parts = []
+        # Base expression: ensure the interactions map exists
+        update_expr = "SET interactions = if_not_exists(interactions, :empty)"
+        expr_attr_values = {
+            ":empty": {"M": {}},  # initialize map if missing
+            ":zero": {"N": "0"}  # default starting value
+        }
         expr_attr_names = {}
-        expr_attr_values = {":zero": {"N": "0"}}
+        update_parts = []
 
+        # Add each event type increment
         for i, (event_type, value) in enumerate(event_increments.items()):
             placeholder_name = f"#e{i}"
             placeholder_value = f":v{i}"
@@ -46,7 +51,8 @@ class InteractionTrackingRepository:
             expr_attr_names[placeholder_name] = event_type
             expr_attr_values[placeholder_value] = {"N": str(value)}
 
-        update_expr = "SET " + ", ".join(update_parts)
+        if update_parts:
+            update_expr += ", " + ", ".join(update_parts)
 
         try:
             response = self.dynamodb.update_item(
@@ -60,11 +66,10 @@ class InteractionTrackingRepository:
                 ExpressionAttributeValues=expr_attr_values,
                 ReturnValues="UPDATED_NEW"
             )
-
             return response.get("Attributes", {})
         except Exception as e:
-            logging.error(e)
-            return {"ok": False}
+            logging.error(f"Failed to update interactions: {e}")
+            return {"ok": False, "error": str(e)}
 
     def increment_unique_users(self, tenant_id: str, month: str = None, by: int = 1):
         """
