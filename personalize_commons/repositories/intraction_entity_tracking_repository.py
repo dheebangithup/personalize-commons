@@ -36,30 +36,72 @@ class InteractionTrackingRepository:
             month = ist_now().strftime("%Y-%m")  # use IST timezone
 
         # Build UpdateExpression dynamically
-        update_expr = "ADD "
+        update_expr = "SET "
         expr_attr_names = {}
         expr_attr_values = {}
         updates = []
 
-        for i, (event_type, value) in enumerate(event_increments.items()):
-            placeholder_name = f"#e{i}"
-            placeholder_value = f":v{i}"
-            updates.append(f"interactions.{placeholder_name} {placeholder_value}")
-            expr_attr_names[placeholder_name] = event_type
-            expr_attr_values[placeholder_value] = {"N": str(value)}
+        # Initialize interactions map if it doesn't exist
+        if not event_increments:
+            return {"ok": True}
 
+        # Prepare the update expression for each event type
+        for i, (event_type, value) in enumerate(event_increments.items()):
+            event_alias = f"#e{i}"
+            value_alias = f":v{i}"
+            
+            expr_attr_names[event_alias] = event_type
+            expr_attr_values[value_alias] = {"N": str(value)}
+            
+            # Use if_not_exists to handle new attributes
+            updates.append(f"interactions.{event_alias} = if_not_exists(interactions.{event_alias}, :zero) + {value_alias}")
+
+        # Add zero value for if_not_exists
+        expr_attr_values[":zero"] = {"N": "0"}
+        
+        # If no updates, return early
+        if not updates:
+            return {"ok": True}
+            
         update_expr += ", ".join(updates)
 
-        response = self.dynamodb.update_item(
-            TableName=self.table_name,
-            Key={AppConstants.TENANT_ID: {"S": tenant_id}, f"{DBConstants.MONTH}": {"S": month}},
-            UpdateExpression=update_expr,
-            ExpressionAttributeNames=expr_attr_names,
-            ExpressionAttributeValues=expr_attr_values,
-            ReturnValues="UPDATED_NEW"
-        )
-
-        return response["Attributes"]
+        try:
+            response = self.dynamodb.update_item(
+                TableName=self.table_name,
+                Key={
+                    "tenant_id": {"S": str(tenant_id)},
+                    "month": {"S": str(month)}
+                },
+                UpdateExpression=update_expr,
+                ExpressionAttributeNames=expr_attr_names,
+                ExpressionAttributeValues=expr_attr_values,
+                ReturnValues="UPDATED_NEW"
+            )
+            return response.get("Attributes", {})
+            
+        except self.dynamodb.exceptions.ConditionalCheckFailedException:
+            # Item doesn't exist, create it with initial values
+            try:
+                initial_interactions = {k: {"N": str(v)} for k, v in event_increments.items()}
+                
+                response = self.dynamodb.put_item(
+                    TableName=self.table_name,
+                    Item={
+                        "tenant_id": {"S": str(tenant_id)},
+                        "month": {"S": str(month)},
+                        "interactions": {"M": initial_interactions}
+                    },
+                    ReturnValues="NONE"
+                )
+                return {"ok": True, "created": True}
+                
+            except Exception as e:
+                logging.error(f"Failed to create new item: {e}")
+                return {"ok": False, "error": str(e)}
+                
+        except Exception as e:
+            logging.error(f"Failed to update interactions: {e}")
+            return {"ok": False, "error": str(e)}
 
     def get_interactions(self, tenant_id: str, month: str = None) -> InteractionTrackingEntity:
         """
