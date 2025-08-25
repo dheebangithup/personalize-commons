@@ -22,25 +22,18 @@ class InteractionTrackingRepository:
         """
         Increments one or more interaction counters atomically.
         Example event_increments: {"purchase": 5, "add_to_cart": 2}
-        Creates the row if not present, and initializes the interactions map.
+        Creates the row if not present.
         """
         if month is None:
             month = ist_now().strftime("%Y-%m")
 
         if not event_increments:
-            # no-op safe-guard
             return {"ok": True}
 
-        # Base expression: ensure the interactions map exists
-        update_expr = "SET interactions = if_not_exists(interactions, :empty)"
-        expr_attr_values = {
-            ":empty": {"M": {}},  # initialize map if missing
-            ":zero": {"N": "0"}  # default starting value
-        }
-        expr_attr_names = {}
         update_parts = []
+        expr_attr_names = {}
+        expr_attr_values = {":zero": {"N": "0"}}
 
-        # Add each event type increment
         for i, (event_type, value) in enumerate(event_increments.items()):
             placeholder_name = f"#e{i}"
             placeholder_value = f":v{i}"
@@ -51,8 +44,7 @@ class InteractionTrackingRepository:
             expr_attr_names[placeholder_name] = event_type
             expr_attr_values[placeholder_value] = {"N": str(value)}
 
-        if update_parts:
-            update_expr += ", " + ", ".join(update_parts)
+        update_expr = "SET " + ", ".join(update_parts)
 
         try:
             response = self.dynamodb.update_item(
