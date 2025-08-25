@@ -19,95 +19,51 @@ class InteractionTrackingRepository:
         self.table_name = os.getenv('INTERACTION_TRACKING_TABLE', 'interaction_tracking')
 
     def update_interactions(self, tenant_id: str, event_increments: dict, month: str = None):
+        '''
+        usage
+        repo = InteractionRepository(table_name="Interactions")
+
+        # First-time insert or increment
+        repo.update_interactions("tenant123", {"purchase": 10})
+
+        # Increment multiple events
+        repo.update_interactions("tenant123", {"purchase": 5, "add_to_cart": 3})
+
+        # Fetch record
+        record = repo.get_interactions("tenant123", "2025-08")
+        '''
         if month is None:
-            month = ist_now().strftime("%Y-%m")
+            month = ist_now().strftime("%Y-%m")  # use IST timezone
 
-        if not event_increments:
-            return {"ok": True}
+        # Build UpdateExpression dynamically
+        update_expr = "ADD "
+        expr_attr_names = {}
+        expr_attr_values = {}
+        updates = []
 
-        # Build the update expression and attribute values
-        update_expr = "SET "
-        expr_attr_names = {
-            "#tenant_id": AppConstants.TENANT_ID,
-            "#month": DBConstants.MONTH
-        }
-        expr_attr_values = {":zero": {"N": "0"}}
-        
-        # Add each event increment to the update expression
         for i, (event_type, value) in enumerate(event_increments.items()):
-            event_alias = f"#evt{i}"
-            value_alias = f":val{i}"
-            
-            expr_attr_names[event_alias] = event_type
-            expr_attr_values[value_alias] = {"N": str(value)}
-            
-            if i > 0:
-                update_expr += ", "
-            update_expr += f"interactions.{event_alias} = if_not_exists(interactions.{event_alias}, :zero) + {value_alias}"
+            placeholder_name = f"#e{i}"
+            placeholder_value = f":v{i}"
+            updates.append(f"interactions.{placeholder_name} {placeholder_value}")
+            expr_attr_names[placeholder_name] = event_type
+            expr_attr_values[placeholder_value] = {"N": str(value)}
 
-        # First try to update with condition that the item exists
-        try:
-            response = self.dynamodb.update_item(
-                TableName=self.table_name,
-                Key={
-                    AppConstants.TENANT_ID: {"S": tenant_id},
-                    DBConstants.MONTH: {"S": month}
-                },
-                UpdateExpression=update_expr,
-                ConditionExpression="attribute_exists(#tenant_id) AND attribute_exists(#month)",
-                ExpressionAttributeNames=expr_attr_names,
-                ExpressionAttributeValues=expr_attr_values,
-                ReturnValues="UPDATED_NEW"
-            )
-            return response.get("Attributes", {})
-            
-        except self.dynamodb.exceptions.ConditionalCheckFailedException:
-            # Item doesn't exist, create it with initial values
-            try:
-                initial_interactions = {k: {"N": str(v)} for k, v in event_increments.items()}
-                
-                response = self.dynamodb.put_item(
-                    TableName=self.table_name,
-                    Item={
-                        AppConstants.TENANT_ID: {"S": tenant_id},
-                        DBConstants.MONTH: {"S": month},
-                        "interactions": {"M": initial_interactions}
-                    },
-                    ReturnValues="NONE"
-                )
-                return {"ok": True, "created": True}
-                
-            except Exception as e:
-                logging.error(f"Failed to create new item: {e}")
-                return {"ok": False, "error": str(e)}
-                
-        except Exception as e:
-            logging.error(f"Failed to update interactions: {e}")
-            return {"ok": False, "error": str(e)}
-
-    def increment_unique_users(self, tenant_id: str, month: str = None, by: int = 1):
-        """
-        Increments the unique_users counter. Safe to call after confirming first-time user.
-        Creates the row if not present.
-        """
-        if month is None:
-            month = ist_now().strftime("%Y-%m")
+        update_expr += ", ".join(updates)
 
         response = self.dynamodb.update_item(
             TableName=self.table_name,
-            Key={
-                AppConstants.TENANT_ID: {"S": tenant_id},
-                DBConstants.MONTH: {"S": month}
-            },
-            UpdateExpression="ADD unique_users :inc",
-            ExpressionAttributeValues={":inc": {"N": str(by)}},
+            Key={AppConstants.TENANT_ID: {"S": tenant_id}, f"{DBConstants.MONTH}": {"S": month}},
+            UpdateExpression=update_expr,
+            ExpressionAttributeNames=expr_attr_names,
+            ExpressionAttributeValues=expr_attr_values,
             ReturnValues="UPDATED_NEW"
         )
-        return response.get("Attributes", {})
+
+        return response["Attributes"]
 
     def get_interactions(self, tenant_id: str, month: str = None) -> InteractionTrackingEntity:
         """
-        Returns a Pydantic entity (no enum conversion; keys remain strings).
+        Retrieve interaction record as a Pydantic entity.
         """
         if month is None:
             month = ist_now().strftime("%Y-%m")
@@ -115,23 +71,19 @@ class InteractionTrackingRepository:
         response = self.dynamodb.get_item(
             TableName=self.table_name,
             Key={
-                AppConstants.TENANT_ID: {"S": tenant_id},
-                DBConstants.MONTH: {"S": month}
+                "tenant_id": {"S": tenant_id},
+                "month": {"S": month}
             }
         )
         item = response.get("Item")
-        if not item:
+        if not item or "interactions" not in item:
             return InteractionTrackingEntity(tenant_id=tenant_id, month=month)
 
-        interactions = {}
-        if "interactions" in item:
-            interactions = {k: int(v["N"]) for k, v in item["interactions"]["M"].items()}
-
-        unique_users = int(item.get("unique_users", {}).get("N", "0"))
+        # Convert DynamoDB map to simple dict
+        interactions = {k: int(v["N"]) for k, v in item["interactions"]["M"].items()}
 
         return InteractionTrackingEntity(
             tenant_id=tenant_id,
             month=month,
-            interactions=interactions,
-            unique_users=unique_users
+            interactions=interactions
         )
