@@ -1,3 +1,4 @@
+import logging
 import os
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.constants.db_constants import DBConstants
@@ -47,19 +48,23 @@ class InteractionTrackingRepository:
 
         update_expr = "SET " + ", ".join(update_parts)
 
-        response = self.dynamodb.update_item(
-            TableName=self.table_name,
-            Key={
-                AppConstants.TENANT_ID: {"S": tenant_id},
-                DBConstants.MONTH: {"S": month}
-            },
-            UpdateExpression=update_expr,
-            ExpressionAttributeNames=expr_attr_names,
-            ExpressionAttributeValues=expr_attr_values,
-            ReturnValues="UPDATED_NEW"
-        )
+        try:
+            response = self.dynamodb.update_item(
+                TableName=self.table_name,
+                Key={
+                    AppConstants.TENANT_ID: {"S": tenant_id},
+                    DBConstants.MONTH: {"S": month}
+                },
+                UpdateExpression=update_expr,
+                ExpressionAttributeNames=expr_attr_names,
+                ExpressionAttributeValues=expr_attr_values,
+                ReturnValues="UPDATED_NEW"
+            )
 
-        return response.get("Attributes", {})
+            return response.get("Attributes", {})
+        except Exception as e:
+            logging.error(e)
+            return {"ok": False}
 
     def increment_unique_users(self, tenant_id: str, month: str = None, by: int = 1):
         """
