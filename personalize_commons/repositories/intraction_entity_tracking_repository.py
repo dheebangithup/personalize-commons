@@ -27,7 +27,10 @@ class InteractionTrackingRepository:
 
         # Build the update expression and attribute values
         update_expr = "SET "
-        expr_attr_names = {}
+        expr_attr_names = {
+            "#tenant_id": AppConstants.TENANT_ID,
+            "#month": DBConstants.MONTH
+        }
         expr_attr_values = {":zero": {"N": "0"}}
         
         # Add each event increment to the update expression
@@ -51,9 +54,9 @@ class InteractionTrackingRepository:
                     DBConstants.MONTH: {"S": month}
                 },
                 UpdateExpression=update_expr,
+                ConditionExpression="attribute_exists(#tenant_id) AND attribute_exists(#month)",
                 ExpressionAttributeNames=expr_attr_names,
                 ExpressionAttributeValues=expr_attr_values,
-                ConditionExpression=f"attribute_exists({AppConstants.TENANT_ID}) AND attribute_exists({DBConstants.MONTH})",
                 ReturnValues="UPDATED_NEW"
             )
             return response.get("Attributes", {})
