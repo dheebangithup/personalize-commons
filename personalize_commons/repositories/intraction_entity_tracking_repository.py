@@ -25,24 +25,24 @@ class InteractionTrackingRepository:
         if not event_increments:
             return {"ok": True}
 
-        # Build update expressions for each event type
-        update_expr_parts = []
+        # Build the update expression and attribute values
+        update_expr = "SET "
         expr_attr_names = {}
         expr_attr_values = {":zero": {"N": "0"}}
-
+        
+        # Add each event increment to the update expression
         for i, (event_type, value) in enumerate(event_increments.items()):
             event_alias = f"#evt{i}"
             value_alias = f":val{i}"
-
+            
             expr_attr_names[event_alias] = event_type
             expr_attr_values[value_alias] = {"N": str(value)}
+            
+            if i > 0:
+                update_expr += ", "
+            update_expr += f"interactions.{event_alias} = if_not_exists(interactions.{event_alias}, :zero) + {value_alias}"
 
-            update_expr_parts.append(
-                f"interactions.{event_alias} = if_not_exists(interactions.{event_alias}, :zero) + {value_alias}"
-            )
-
-        update_expr = "SET " + ", ".join(update_expr_parts)
-
+        # First try to update with condition that the item exists
         try:
             response = self.dynamodb.update_item(
                 TableName=self.table_name,
@@ -53,9 +53,31 @@ class InteractionTrackingRepository:
                 UpdateExpression=update_expr,
                 ExpressionAttributeNames=expr_attr_names,
                 ExpressionAttributeValues=expr_attr_values,
+                ConditionExpression=f"attribute_exists({AppConstants.TENANT_ID}) AND attribute_exists({DBConstants.MONTH})",
                 ReturnValues="UPDATED_NEW"
             )
             return response.get("Attributes", {})
+            
+        except self.dynamodb.exceptions.ConditionalCheckFailedException:
+            # Item doesn't exist, create it with initial values
+            try:
+                initial_interactions = {k: {"N": str(v)} for k, v in event_increments.items()}
+                
+                response = self.dynamodb.put_item(
+                    TableName=self.table_name,
+                    Item={
+                        AppConstants.TENANT_ID: {"S": tenant_id},
+                        DBConstants.MONTH: {"S": month},
+                        "interactions": {"M": initial_interactions}
+                    },
+                    ReturnValues="NONE"
+                )
+                return {"ok": True, "created": True}
+                
+            except Exception as e:
+                logging.error(f"Failed to create new item: {e}")
+                return {"ok": False, "error": str(e)}
+                
         except Exception as e:
             logging.error(f"Failed to update interactions: {e}")
             return {"ok": False, "error": str(e)}
