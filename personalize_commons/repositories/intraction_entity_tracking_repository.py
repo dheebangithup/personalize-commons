@@ -1,7 +1,7 @@
 import os
 from personalize_commons.constants.app_constants import AppConstants
 from personalize_commons.constants.db_constants import DBConstants
-from personalize_commons.entity.intraction_tracking_entity import IntractionTrackingEntity
+from personalize_commons.entity.intraction_tracking_entity import InteractionTrackingEntity
 from personalize_commons.utils.datetime_utils import ist_now
 
 class InteractionTrackingRepository:
@@ -15,7 +15,7 @@ class InteractionTrackingRepository:
     """
     def __init__(self, client):
         self.dynamodb = client
-        self.table_name = os.getenv('INTRACTION_TRACKING_REPOSITORY_TABLE', 'interaction_tracking')
+        self.table_name = os.getenv('INTERACTION_TRACKING_TABLE', 'interaction_tracking')
 
     def update_interactions(self, tenant_id: str, event_increments: dict, month: str = None):
         """
@@ -78,7 +78,7 @@ class InteractionTrackingRepository:
         )
         return response.get("Attributes", {})
 
-    def get_interactions(self, tenant_id: str, month: str = None) -> IntractionTrackingEntity:
+    def get_interactions(self, tenant_id: str, month: str = None) -> InteractionTrackingEntity:
         """
         Returns a Pydantic entity (no enum conversion; keys remain strings).
         """
@@ -94,7 +94,7 @@ class InteractionTrackingRepository:
         )
         item = response.get("Item")
         if not item:
-            return IntractionTrackingEntity(tenant_id=tenant_id, month=month)
+            return InteractionTrackingEntity(tenant_id=tenant_id, month=month)
 
         interactions = {}
         if "interactions" in item:
@@ -102,9 +102,9 @@ class InteractionTrackingRepository:
 
         unique_users = int(item.get("unique_users", {}).get("N", "0"))
 
-        return IntractionTrackingEntity(
+        return InteractionTrackingEntity(
             tenant_id=tenant_id,
             month=month,
-            intractions=interactions,
+            interactions=interactions,
             unique_users=unique_users
         )

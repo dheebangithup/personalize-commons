@@ -15,7 +15,7 @@ class InteractionUserTrackerRepository:
 
     def __init__(self, client):
         self.dynamodb = client
-        self.table_name = os.getenv("INTRACTION_USER_TRACKER_TABLE", "intraction_user_tracker")
+        self.table_name = os.getenv("INTERACTION_USER_TRACKER_TABLE", "interaction_user_tracker")
         self.ttl_days = int(os.getenv("INTRACTION_USER_TRACKER_TTL_DAYS", "730"))  # default ~24 months
 
     def _compute_ttl_epoch(self) -> int:
