@@ -8,4 +8,3 @@ class TenantResponseModel(BaseModel):
     email:str
     name:str
     uid:str=Field(default='Firebase uid')
-    tenant_public_key: str
