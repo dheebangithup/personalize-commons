@@ -1,6 +1,7 @@
 # src/dependencies/repositories.py
 
 from personalize_commons.repositories.campaign_repository import CampaignRepository
+from personalize_commons.repositories.interaction_tracking_repository import InteractionTrackingRepository
 from personalize_commons.repositories.item_repository import ItemRepository
 from personalize_commons.repositories.recommendation_repository import RecommendationRepository
 from personalize_commons.repositories.tenant_repository import TenantRepository
@@ -14,6 +15,7 @@ __campaign_repository = None
 __item_repository = None
 __recommendation_repository = None
 __tenant_repository = None
+__interaction_repository = None
 
 
 def get_tenant_repository():
@@ -46,3 +48,9 @@ def get_recommendation_repository():
     if __recommendation_repository is None:
         __recommendation_repository = RecommendationRepository(resource=get_dynamodb_resource())
     return __recommendation_repository
+
+def get_interaction_repository():
+    global __interaction_repository
+    if __interaction_repository is None:
+        __interaction_repository=InteractionTrackingRepository(dynamodb_client=get_dynamodb_client())
+    return __interaction_repository
