@@ -10,6 +10,9 @@ def ist_now() -> datetime:
     """
     return datetime.now(IST)
 
+def  ist_now_month(date_time:datetime=None)->str:
+    return date_time.strftime("%Y-%m") if date_time else ist_now().strftime("%Y-%m")
+
 def ist_now_iso() -> str:
     """
     Get current IST time in ISO format (useful for storing in DB or sending to frontend).
