@@ -18,6 +18,7 @@ LSI: StatusIndex,CreatedAtIndex
 '''
 class RecommendationStatus(str, Enum):
     """Status of the recommendation job."""
+    STARTED = "STARTED"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
