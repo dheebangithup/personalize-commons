@@ -34,7 +34,7 @@ class InteractionTrackingRepository:
 
             item = resp["Item"]
             interactions = {
-                k: int(v["N"]) for k, v in item.get("interactions", {}).items()
+                k: int(v["N"]) for k, v in item.get("interactions", {}).get("K",{}).items()
             } if "interactions" in item else {}
 
             return InteractionTracking(

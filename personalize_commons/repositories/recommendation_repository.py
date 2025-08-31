@@ -297,7 +297,7 @@ class RecommendationRepository:
             status: str = None
     ) -> List[RecommendationEntity]:
         """
-        Get all recommendations within a date range without pagination.
+        Get all recommendations within a date range, optionally filtered by status.
 
         Args:
             tenant_id: ID of the tenant
@@ -312,44 +312,45 @@ class RecommendationRepository:
             Exception: For DynamoDB errors
         """
         try:
-            # Adjust end_date to include the entire end day
-            end_date = end_date + timedelta(days=1)
-            
-            # Base query parameters
-            key_condition = 'tenant_id = :tenant_id AND #created_at BETWEEN :start_date AND :end_date'
+            # Convert datetime objects to ISO format strings
+            start_iso = start_date.isoformat()
+            end_iso = end_date.isoformat()
+
+            expr_attr_names = {
+                '#created_at': 'created_at'
+            }
+
             expr_attr_values = {
                 ':tenant_id': tenant_id,
-                ':start_date': start_date.isoformat(),
-                ':end_date': end_date.isoformat()
+                ':start_date': start_iso,
+                ':end_date': end_iso
             }
-            expr_attr_names = {'#created_at': 'created_at'}
-            
-            # Add status filter if provided
-            if status:
-                key_condition += ' AND #status = :status'
-                expr_attr_names['#status'] = 'status'
-                expr_attr_values[':status'] = status
 
-            # Initial query parameters
             query_params = {
+                'TableName': self.table.name,
                 'IndexName': DBConstants.CREATED_AT_INDEX,
-                'KeyConditionExpression': key_condition,
+                'KeyConditionExpression': 'tenant_id = :tenant_id AND #created_at BETWEEN :start_date AND :end_date',
                 'ExpressionAttributeNames': expr_attr_names,
                 'ExpressionAttributeValues': expr_attr_values,
-                'ScanIndexForward': False  # Most recent first
+                'ScanIndexForward': False
             }
+
+            # Add status filter if provided
+            if status:
+                query_params['FilterExpression'] = '#status = :status'
+                query_params['ExpressionAttributeNames']['#status'] = 'status'
+                query_params['ExpressionAttributeValues'][':status'] = status
 
             items = []
             last_evaluated_key = None
 
-            # Handle pagination to get all results
             while True:
                 if last_evaluated_key:
                     query_params['ExclusiveStartKey'] = last_evaluated_key
-                
+
                 response = self.table.query(**query_params)
                 items.extend(response.get('Items', []))
-                
+
                 last_evaluated_key = response.get('LastEvaluatedKey')
                 if not last_evaluated_key:
                     break
@@ -357,5 +358,5 @@ class RecommendationRepository:
             return [RecommendationEntity.from_dynamodb_item(item) for item in items]
 
         except Exception as e:
-            logger.error(f"Error getting recommendations by date range: {str(e)}", exc_info=True)
+            logging.error(f"Error getting recommendations by date range: {str(e)}", exc_info=True)
             raise

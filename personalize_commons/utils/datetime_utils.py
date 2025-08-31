@@ -68,3 +68,4 @@ if __name__ == "__main__":
     test_date = datetime(2023, 2, 15)  # February 15, 2023
     start, end = get_month_start_end_dates(test_date)
     print(f"\nFor Feb 15, 2023 - Start: {start}, End: {end}")
+    print(ist_now_month(test_date))
