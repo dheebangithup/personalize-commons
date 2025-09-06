@@ -130,6 +130,7 @@ class CampaignRepository:
             logger.error(f"Unexpected error deleting campaign: {str(e)}")
             raise
 
+
     def get_campaigns_by_updated_at(
             self,
             tenant_id: str,
@@ -143,18 +144,7 @@ class CampaignRepository:
         """
         Get campaigns by update date range and status using appropriate LSI.
         Uses StatusIndex when filtering by status, otherwise uses UpdatedAtIndex.
-
-        Args:
-            tenant_id: ID of the tenant
-            start_date: Optional start date for filtering
-            end_date: Optional end date for filtering
-            status: Optional status to filter campaigns
-            page_size: Number of items per page
-            last_evaluated_key: Pagination token from previous query
-            sort_order: Sort order ('asc' or 'desc')
-
-        Returns:
-            Dictionary containing items and pagination info
+        Ensures each page has up to `page_size` filtered items.
         """
         try:
             # Base key condition
@@ -163,68 +153,61 @@ class CampaignRepository:
             expr_attr_names = {}
             filter_expression = []
 
-            # Determine which index to use based on parameters
+            # Choose index
             index_name = None
-            # This will exclude all records from July 15, unless they were created exactly at midnight (00:00:00) — which is very unlikely.
-            if end_date is not None:
-                end_date = end_date + timedelta(days=1)
-            # If status is provided but no date range, use StatusIndex
             if status and not (start_date or end_date):
                 index_name = DBConstants.STAUS_AT_INDEX
                 key_condition += ' AND #status = :status'
                 expr_attr_names['#status'] = 'status'
                 expr_attr_values[':status'] = status
-
-
-
-            # Otherwise, use UpdatedAtIndex (default)
             else:
                 index_name = DBConstants.UPDATED_AT_INDEX
-                # Add date range to key condition if provided
                 if start_date and end_date:
                     key_condition += ' AND #updated_at BETWEEN :start_date AND :end_date'
                     expr_attr_names['#updated_at'] = 'updated_at'
                     expr_attr_values[':start_date'] = start_date.isoformat()
                     expr_attr_values[':end_date'] = end_date.isoformat()
-
-                # Add status as filter if provided
                 if status:
                     filter_expression.append('#status = :status')
                     expr_attr_names['#status'] = 'status'
                     expr_attr_values[':status'] = status
 
-            # Build query parameters
+            # Build base query params
             query_params = {
                 'IndexName': index_name,
                 'KeyConditionExpression': key_condition,
                 'ExpressionAttributeValues': expr_attr_values,
-                'Limit': page_size,
-                'ScanIndexForward': sort_order.lower() == 'asc'
+                'ScanIndexForward': sort_order.lower() == 'asc',
+                'Limit': page_size * 2  # over-fetch a little to reduce round trips
             }
-
             if expr_attr_names:
                 query_params['ExpressionAttributeNames'] = expr_attr_names
-
-            # Add filter expression if we have any filters
             if filter_expression:
                 query_params['FilterExpression'] = ' AND '.join(filter_expression)
-
             if last_evaluated_key:
                 query_params['ExclusiveStartKey'] = last_evaluated_key
 
-            # Execute query
-            response = self.campaign_table.query(**query_params)
+            items = []
+            response = {}
+            while len(items) < page_size:
+                response = self.campaign_table.query(**query_params)
+                new_items = [CampaignEntity.from_dynamodb_item(item) for item in response.get('Items', [])]
+                items.extend(new_items)
 
-            # Convert items to entities
-            items = [CampaignEntity.from_dynamodb_item(item) for item in response.get('Items', [])]
+                last_evaluated_key = response.get('LastEvaluatedKey')
+                if not last_evaluated_key or len(items) >= page_size:
+                    break
+
+                # continue fetching next page if current not full
+                query_params['ExclusiveStartKey'] = last_evaluated_key
 
             return {
-                AppConstants.ITEMS: items,
-                AppConstants.LAST_EVAL_KEY: response.get('LastEvaluatedKey'),
-                AppConstants.HAS_MORE: 'LastEvaluatedKey' in response
+                AppConstants.ITEMS: items[:page_size],
+                AppConstants.LAST_EVAL_KEY: last_evaluated_key,
+                AppConstants.HAS_MORE: bool(last_evaluated_key)
             }
 
-
         except Exception as e:
-            logging.error(f"Error getting campaigns: {str(e)}")
+            logging.error(f"Error getting campaigns: {str(e)}", exc_info=True)
             raise
+
