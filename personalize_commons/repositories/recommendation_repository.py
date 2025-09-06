@@ -203,18 +203,7 @@ class RecommendationRepository:
         """
         Get recommendations by status and/or date range using appropriate LSI.
         Uses StatusIndex when filtering by status, otherwise uses CreatedAtIndex.
-
-        Args:
-            tenant_id: ID of the tenant
-            status: Optional status to filter recommendations
-            start_date: Optional start date for filtering
-            end_date: Optional end date for filtering
-            page_size: Number of items per page
-            last_evaluated_key: Pagination token from previous query
-            sort_order: Sort order ('asc' or 'desc')
-
-        Returns:
-            Dictionary containing items and pagination info
+        Ensures each page has up to `page_size` filtered items.
         """
         try:
             # Base key condition
@@ -223,66 +212,56 @@ class RecommendationRepository:
             expr_attr_names = {}
             filter_expression = []
 
-            # Determine which index to use based on parameters
             index_name = None
-            # This will exclude all records from July 15, unless they were created exactly at midnight (00:00:00) — which is very unlikely.
-            if end_date is not None:
-                end_date = end_date + timedelta(days=1)
-
-            # If status is provided but no date range, use StatusIndex
             if status and not (start_date or end_date):
                 index_name = DBConstants.STAUS_AT_INDEX
                 key_condition += ' AND #status = :status'
                 expr_attr_names['#status'] = 'status'
                 expr_attr_values[':status'] = status
-
-
-
-            # Otherwise, use CreatedAtIndex (default)
             else:
                 index_name = DBConstants.CREATED_AT_INDEX
-                # Add date range to key condition if provided
                 if start_date and end_date:
                     key_condition += ' AND #created_at BETWEEN :start_date AND :end_date'
                     expr_attr_names['#created_at'] = 'created_at'
                     expr_attr_values[':start_date'] = start_date.isoformat()
                     expr_attr_values[':end_date'] = end_date.isoformat()
-
-                # Add status as filter if provided
                 if status:
                     filter_expression.append('#status = :status')
                     expr_attr_names['#status'] = 'status'
                     expr_attr_values[':status'] = status
 
-            # Build query parameters
             query_params = {
                 'IndexName': index_name,
                 'KeyConditionExpression': key_condition,
                 'ExpressionAttributeValues': expr_attr_values,
-                'Limit': page_size,
-                'ScanIndexForward': sort_order.lower() == 'asc'
+                'ScanIndexForward': sort_order.lower() == 'asc',
+                'Limit': page_size * 2  # over-fetch a little to reduce round trips
             }
-
             if expr_attr_names:
                 query_params['ExpressionAttributeNames'] = expr_attr_names
-
-            # Add filter expression if we have any filters
             if filter_expression:
                 query_params['FilterExpression'] = ' AND '.join(filter_expression)
-
             if last_evaluated_key:
                 query_params['ExclusiveStartKey'] = last_evaluated_key
 
-            # Execute query
-            response = self.table.query(**query_params)
+            items = []
+            response = {}
+            while len(items) < page_size:
+                response = self.table.query(**query_params)
+                new_items = [RecommendationEntity.from_dynamodb_item(item) for item in response.get('Items', [])]
+                items.extend(new_items)
 
-            # Convert items to entities
-            items = [RecommendationEntity.from_dynamodb_item(item) for item in response.get('Items', [])]
+                last_evaluated_key = response.get('LastEvaluatedKey')
+                if not last_evaluated_key or len(items) >= page_size:
+                    break
+
+                # Continue scanning with next key if page not full
+                query_params['ExclusiveStartKey'] = last_evaluated_key
 
             return {
-                'items': items,
-                'last_evaluated_key': response.get('LastEvaluatedKey'),
-                'has_more': 'LastEvaluatedKey' in response
+                'items': items[:page_size],
+                'last_evaluated_key': last_evaluated_key,
+                'has_more': bool(last_evaluated_key)
             }
 
         except Exception as e:
