@@ -163,6 +163,7 @@ class CampaignRepository:
             else:
                 index_name = DBConstants.UPDATED_AT_INDEX
                 if start_date and end_date:
+                    end_date = end_date + timedelta(days=1)
                     key_condition += ' AND #updated_at BETWEEN :start_date AND :end_date'
                     expr_attr_names['#updated_at'] = 'updated_at'
                     expr_attr_values[':start_date'] = start_date.isoformat()

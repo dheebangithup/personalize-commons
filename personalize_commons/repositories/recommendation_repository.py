@@ -221,6 +221,7 @@ class RecommendationRepository:
             else:
                 index_name = DBConstants.CREATED_AT_INDEX
                 if start_date and end_date:
+                    end_date = end_date + timedelta(days=1)
                     key_condition += ' AND #created_at BETWEEN :start_date AND :end_date'
                     expr_attr_names['#created_at'] = 'created_at'
                     expr_attr_values[':start_date'] = start_date.isoformat()
@@ -292,6 +293,7 @@ class RecommendationRepository:
         """
         try:
             # Convert datetime objects to ISO format strings
+            end_date = end_date + timedelta(days=1)
             start_iso = start_date.isoformat()
             end_iso = end_date.isoformat()
 
