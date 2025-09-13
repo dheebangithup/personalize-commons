@@ -12,6 +12,7 @@ class AppConstants:
     ITEM_ID = "item_id"
     USER_ID = "user_id"
     TENANT_ID = "tenant_id"
+    ACCOUNT_ID = "account_id"
     STATUS = "status"
     LAST_EVAL_KEY = "last_evaluated_key"
     NEXT_PAGE_TOKEN = "next_page_token"
