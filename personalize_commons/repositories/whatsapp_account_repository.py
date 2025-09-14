@@ -18,7 +18,7 @@ class WhatsAppAccountRepository:
 
     def _get_dynamo_item(self, account: WhatsAppAccount) -> Dict[str, Any]:
         """Convert WhatsAppAccount model to DynamoDB item format"""
-        return {
+        item= {
             AppConstants.ACCOUNT_ID: account.account_id,
             AppConstants.TENANT_ID: account.tenant_id,
             'account_name': account.account_name,
@@ -29,6 +29,17 @@ class WhatsAppAccountRepository:
             'created_at': account.created_at.isoformat(),
             'updated_at': account.updated_at.isoformat()
         }
+        # Add new token management fields if they exist
+        if account.app_id:
+            item['appId'] = account.app_id
+        if account.app_secret_arn:
+            item['appSecretArn'] = account.app_secret_arn
+        if account.token_expires_at:
+            item['tokenExpiresAt'] = account.token_expires_at.isoformat()
+        if account.token_last_refreshed:
+            item['tokenLastRefreshed'] = account.token_last_refreshed.isoformat()
+
+        return item
 
     def create(self, account: WhatsAppAccount) -> WhatsAppAccount:
         """

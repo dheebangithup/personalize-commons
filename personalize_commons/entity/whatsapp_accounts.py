@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, validator, field_validator
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 from personalize_commons.constants.app_constants import AppConstants
@@ -15,8 +15,12 @@ class WhatsAppAccount(BaseModel):
     business_account_id: str = Field(..., description="WhatsApp Business Account ID from Meta")
     access_token_secret_arn: str = Field(..., description="AWS Secrets Manager ARN for access token")
     is_active: bool = Field(default=True, description="Whether the account is active")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    app_id: Optional[str] = Field(None, description="Meta App ID for token refresh")
+    app_secret_arn: Optional[str] = Field(None, description="AWS Secrets Manager ARN for app secret")
+    token_expires_at: Optional[datetime] = Field(None, description="Access token expiration date")
+    token_last_refreshed: Optional[datetime] = Field(None, description="When token was last refreshed")
+    created_at: datetime = Field(default_factory=ist_now)
+    updated_at: datetime = Field(default_factory=ist_now)
 
     class Config:
         json_encoders = {
@@ -43,15 +47,19 @@ class WhatsAppAccount(BaseModel):
 
         # Convert DynamoDB item to model fields
         return cls(
-            account_id=item.get(AppConstants.ACCOUNT_ID),
-            tenant_id=item.get(AppConstants.TENANT_ID),
-            account_name=item.get('account_name'),
-            phone_number_id=item.get('phone_number_id'),
-            business_account_id=item.get('business_account_id'),
+            account_id=item.get('accountId'),
+            tenant_id=item.get('tenantId'),
+            account_name=item.get('accountName'),
+            phone_number_id=item.get('phoneNumberId'),
+            business_account_id=item.get('businessAccountId'),
             access_token_secret_arn=item.get('accessTokenSecretArn'),
-            is_active=item.get('is_active', True),
-            created_at=cls._parse_datetime(item.get('created_at')),
-            updated_at=cls._parse_datetime(item.get('updated_at'))
+            app_id=item.get('appId'),
+            app_secret_arn=item.get('appSecretArn'),
+            token_expires_at=cls._parse_datetime(item.get('tokenExpiresAt')),
+            token_last_refreshed=cls._parse_datetime(item.get('tokenLastRefreshed')),
+            is_active=item.get('isActive', True),
+            created_at=cls._parse_datetime(item.get('createdAt')),
+            updated_at=cls._parse_datetime(item.get('updatedAt'))
         )
 
     @staticmethod
@@ -96,6 +104,23 @@ class WhatsAppAccount(BaseModel):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+    def is_token_expired(self) -> bool:
+        """Check if token is expired or about to expire"""
+        if not self.token_expires_at:
+            return True
+
+        # Consider token expired if it expires within 1 hours
+        from datetime import datetime
+        seven_days_from_now = datetime.now() + timedelta(hours=1)
+        return self.token_expires_at <= seven_days_from_now
+
+    def update_token_info(self, expires_in_seconds: int):
+        """Update token expiration information"""
+        from datetime import datetime, timedelta
+        self.token_expires_at = datetime.now() + timedelta(seconds=expires_in_seconds)
+        self.token_last_refreshed = datetime.now()
+        self.updated_at = datetime.now()
 
 
 # Helper functions for batch operations
