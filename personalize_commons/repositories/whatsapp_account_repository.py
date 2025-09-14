@@ -17,29 +17,7 @@ class WhatsAppAccountRepository:
         self.table = self.dynamodb.Table(os.getenv('DYNAMO_TABLE_WHATSAPP_ACCOUNTS'))
 
     def _get_dynamo_item(self, account: WhatsAppAccount) -> Dict[str, Any]:
-        """Convert WhatsAppAccount model to DynamoDB item format"""
-        item= {
-            AppConstants.ACCOUNT_ID: account.account_id,
-            AppConstants.TENANT_ID: account.tenant_id,
-            'account_name': account.account_name,
-            'phone_number_id': account.phone_number_id,
-            'business_account_id': account.business_account_id,
-            'accessTokenSecretArn': account.access_token_secret_arn,
-            'is_active': account.is_active,
-            'created_at': account.created_at.isoformat(),
-            'updated_at': account.updated_at.isoformat()
-        }
-        # Add new token management fields if they exist
-        if account.app_id:
-            item['appId'] = account.app_id
-        if account.app_secret_arn:
-            item['appSecretArn'] = account.app_secret_arn
-        if account.token_expires_at:
-            item['tokenExpiresAt'] = account.token_expires_at.isoformat()
-        if account.token_last_refreshed:
-            item['tokenLastRefreshed'] = account.token_last_refreshed.isoformat()
-
-        return item
+        return account.model_dump()
 
     def create(self, account: WhatsAppAccount) -> WhatsAppAccount:
         """
@@ -103,7 +81,7 @@ class WhatsAppAccountRepository:
         """
         try:
             response = self.table.query(
-                 IndexName='tenant_id_index',
+                IndexName='tenant_id_index',
                 KeyConditionExpression=Key(AppConstants.TENANT_ID).eq(tenant_id)
             )
 
@@ -134,21 +112,12 @@ class WhatsAppAccountRepository:
             expression_attribute_values[':updated_at'] = ist_now_iso()
             expression_attribute_names['#updated_at'] = 'updated_at'
 
-            # Map model field names to DynamoDB attribute names
-            field_mapping = {
-                'account_name': 'account_name',
-                'phone_number_id': 'phone_number_id',
-                'business_account_id': 'business_account_id',
-                'access_token_secret_arn': 'accessTokenSecretArn',
-                'is_active': 'is_active'
-            }
-
+            # Add all fields from update_data that are not None
             for field, value in update_data.items():
-                if value is not None and field in field_mapping:
-                    dynamo_field = field_mapping[field]
-                    update_expression_parts.append(f"#{dynamo_field} = :{dynamo_field}")
-                    expression_attribute_values[f":{dynamo_field}"] = value
-                    expression_attribute_names[f"#{dynamo_field}"] = dynamo_field
+                if value is not None:
+                    update_expression_parts.append(f"#{field} = :{field}")
+                    expression_attribute_values[f":{field}"] = value
+                    expression_attribute_names[f"#{field}"] = field
 
             if len(update_expression_parts) == 1:  # Only updated_at was added
                 return self.get_by_id(account_id, tenant_id)
@@ -301,5 +270,4 @@ updated_account = repo.update_access_token("account-123", "tenant-123", "arn:new
 updated_account = repo.update("account-123", "tenant-123", {
     'account_name': 'Updated Name',
     'is_active': False
-})
-'''
+})'''

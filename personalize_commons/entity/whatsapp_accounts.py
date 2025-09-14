@@ -13,10 +13,10 @@ class WhatsAppAccount(BaseModel):
     account_name: str = Field(..., min_length=1, max_length=255, description="Friendly name for the account")
     phone_number_id: str = Field(..., description="WhatsApp Phone Number ID from Meta")
     business_account_id: str = Field(..., description="WhatsApp Business Account ID from Meta")
-    access_token_secret_arn: str = Field(..., description="AWS Secrets Manager ARN for access token")
+    access_token: str = Field(..., description="AWS Secrets Manager ARN for access token")
     is_active: bool = Field(default=True, description="Whether the account is active")
     app_id: Optional[str] = Field(None, description="Meta App ID for token refresh")
-    app_secret_arn: Optional[str] = Field(None, description="AWS Secrets Manager ARN for app secret")
+    app_secret: Optional[str] = Field(None, description="AWS Secrets Manager ARN for app secret")
     token_expires_at: Optional[datetime] = Field(None, description="Access token expiration date")
     token_last_refreshed: Optional[datetime] = Field(None, description="When token was last refreshed")
     created_at: datetime = Field(default_factory=ist_now)
@@ -44,41 +44,7 @@ class WhatsAppAccount(BaseModel):
         """Create a WhatsAppAccount instance from a DynamoDB item"""
         if not item:
             return None
-
-        # Map DynamoDB field names to model field names
-        field_mapping = {
-            'accountId': 'account_id',
-            'tenantId': 'tenant_id',
-            'accountName': 'account_name',
-            'phoneNumberId': 'phone_number_id',
-            'businessAccountId': 'business_account_id',
-            'accessTokenSecretArn': 'access_token_secret_arn',
-            'appId': 'app_id',
-            'appSecretArn': 'app_secret_arn',
-            'tokenExpiresAt': 'token_expires_at',
-            'tokenLastRefreshed': 'token_last_refreshed',
-            'isActive': 'is_active',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at'
-        }
-        
-        # Create a new dict with model field names
-        model_data = {}
-        for db_field, model_field in field_mapping.items():
-            if db_field in item:
-                model_data[model_field] = item[db_field]
-        
-        # Handle datetime fields
-        datetime_fields = ['token_expires_at', 'token_last_refreshed', 'created_at', 'updated_at']
-        for field in datetime_fields:
-            if field in model_data:
-                model_data[field] = cls._parse_datetime(model_data[field])
-        
-        # Handle boolean field
-        if 'is_active' in model_data and not isinstance(model_data['is_active'], bool):
-            model_data['is_active'] = str(model_data['is_active']).lower() == 'true'
-
-        return cls(**model_data)
+        return cls(**item)
 
     @staticmethod
     def _parse_datetime(dt_str: Optional[str]) -> datetime:
@@ -110,30 +76,6 @@ class WhatsAppAccount(BaseModel):
         self.account_name = new_name.strip()
         self.updated_at = ist_now()
 
-    def to_response_dict(self) -> Dict[str, Any]:
-        """Convert to API response format (excludes sensitive fields)"""
-        response = {
-            'account_id': self.account_id,
-            'tenant_id': self.tenant_id,
-            'account_name': self.account_name,
-            'phone_number_id': self.phone_number_id,
-            'business_account_id': self.business_account_id,
-            'access_token_secret_arn': self.access_token_secret_arn,
-            'app_id': self.app_id,
-            'app_secret_arn': self.app_secret_arn,
-            'is_active': self.is_active,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
-        }
-
-        # Add token management fields if they exist
-        if self.token_expires_at:
-            response['token_expires_at'] = self.token_expires_at.isoformat()
-        if self.token_last_refreshed:
-            response['token_last_refreshed'] = self.token_last_refreshed.isoformat()
-
-        return response
-
     def is_token_expired(self) -> bool:
         """Check if token is expired or about to expire"""
         if not self.token_expires_at:
@@ -159,12 +101,4 @@ class WhatsAppAccountBatch:
         """Convert multiple DynamoDB items to WhatsAppAccount instances"""
         return [WhatsAppAccount.from_dynamo_item(item) for item in items if item]
 
-    @staticmethod
-    def to_dynamo_items(accounts: List[WhatsAppAccount]) -> List[Dict[str, Any]]:
-        """Convert multiple WhatsAppAccount instances to DynamoDB items"""
-        return [account.to_dynamo_item() for account in accounts]
 
-    @staticmethod
-    def to_response_dicts(accounts: List[WhatsAppAccount]) -> List[Dict[str, Any]]:
-        """Convert multiple WhatsAppAccount instances to response format"""
-        return [account.to_response_dict() for account in accounts]
