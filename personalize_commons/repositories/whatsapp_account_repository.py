@@ -1,5 +1,6 @@
 import os
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
@@ -17,7 +18,16 @@ class WhatsAppAccountRepository:
         self.table = self.dynamodb.Table(os.getenv('DYNAMO_TABLE_WHATSAPP_ACCOUNTS'))
 
     def _get_dynamo_item(self, account: WhatsAppAccount) -> Dict[str, Any]:
-        return account.model_dump()
+        item = account.model_dump()
+        
+        # Convert datetime objects to ISO format strings
+        datetime_fields = ['created_at', 'updated_at', 'token_expires_at', 'token_last_refreshed']
+        for field in datetime_fields:
+            if field in item and item[field] is not None:
+                if isinstance(item[field], datetime):
+                    item[field] = item[field].isoformat()
+        
+        return item
 
     def create(self, account: WhatsAppAccount) -> WhatsAppAccount:
         """
