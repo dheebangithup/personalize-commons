@@ -92,6 +92,7 @@ class WhatsAppAccountRepository:
         """
         try:
             response = self.table.query(
+                 IndexName='tenant_id_index',
                 KeyConditionExpression=Key(AppConstants.TENANT_ID).eq(tenant_id)
             )
 
