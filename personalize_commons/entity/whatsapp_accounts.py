@@ -27,7 +27,7 @@ class WhatsAppAccount(BaseModel):
             datetime: lambda v: v.isoformat()
         }
 
-    @field_validator('account_id', 'tenant_id', 'phone_number_id', 'business_account_id', 'access_token_secret_arn')
+    @field_validator('account_id', 'tenant_id', 'phone_number_id', 'business_account_id', 'access_token')
     def validate_not_empty(cls, v):
         if not v or not v.strip():
             raise ValueError('Field cannot be empty')
