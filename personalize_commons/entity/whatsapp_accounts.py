@@ -94,16 +94,27 @@ class WhatsAppAccount(BaseModel):
 
     def to_response_dict(self) -> Dict[str, Any]:
         """Convert to API response format (excludes sensitive fields)"""
-        return {
-            AppConstants.ACCOUNT_ID: self.account_id,
-            AppConstants.TENANT_ID: self.tenant_id,
+        response = {
+            'account_id': self.account_id,
+            'tenant_id': self.tenant_id,
             'account_name': self.account_name,
             'phone_number_id': self.phone_number_id,
             'business_account_id': self.business_account_id,
+            'access_token_secret_arn': self.access_token_secret_arn,
+            'app_id': self.app_id,
+            'app_secret_arn': self.app_secret_arn,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+        # Add token management fields if they exist
+        if self.token_expires_at:
+            response['token_expires_at'] = self.token_expires_at.isoformat()
+        if self.token_last_refreshed:
+            response['token_last_refreshed'] = self.token_last_refreshed.isoformat()
+
+        return response
 
     def is_token_expired(self) -> bool:
         """Check if token is expired or about to expire"""
