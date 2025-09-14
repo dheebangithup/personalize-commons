@@ -17,7 +17,7 @@ __item_repository = None
 __recommendation_repository = None
 __tenant_repository = None
 __interaction_repository = None
-__whatsapp_account_repo=None
+__whatsapp_account_repository = None
 
 
 def get_tenant_repository():
