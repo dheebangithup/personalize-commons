@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional, Dict, Any
 
 from boto3.dynamodb.conditions import Key
@@ -13,7 +14,7 @@ from personalize_commons.utils.datetime_utils import ist_now_iso
 class WhatsAppAccountRepository:
     def __init__(self, resource):
         self.dynamodb = resource
-        self.table = self.dynamodb.Table('DYNAMO_TABLE_WHATSAPP_ACCOUNTS')
+        self.table = self.dynamodb.Table(os.getenv('DYNAMO_TABLE_WHATSAPP_ACCOUNTS'))
 
     def _get_dynamo_item(self, account: WhatsAppAccount) -> Dict[str, Any]:
         """Convert WhatsAppAccount model to DynamoDB item format"""
