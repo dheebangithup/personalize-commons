@@ -45,22 +45,40 @@ class WhatsAppAccount(BaseModel):
         if not item:
             return None
 
-        # Convert DynamoDB item to model fields
-        return cls(
-            account_id=item.get('accountId'),
-            tenant_id=item.get('tenantId'),
-            account_name=item.get('accountName'),
-            phone_number_id=item.get('phoneNumberId'),
-            business_account_id=item.get('businessAccountId'),
-            access_token_secret_arn=item.get('accessTokenSecretArn'),
-            app_id=item.get('appId'),
-            app_secret_arn=item.get('appSecretArn'),
-            token_expires_at=cls._parse_datetime(item.get('tokenExpiresAt')),
-            token_last_refreshed=cls._parse_datetime(item.get('tokenLastRefreshed')),
-            is_active=item.get('isActive', True),
-            created_at=cls._parse_datetime(item.get('createdAt')),
-            updated_at=cls._parse_datetime(item.get('updatedAt'))
-        )
+        # Map DynamoDB field names to model field names
+        field_mapping = {
+            'accountId': 'account_id',
+            'tenantId': 'tenant_id',
+            'accountName': 'account_name',
+            'phoneNumberId': 'phone_number_id',
+            'businessAccountId': 'business_account_id',
+            'accessTokenSecretArn': 'access_token_secret_arn',
+            'appId': 'app_id',
+            'appSecretArn': 'app_secret_arn',
+            'tokenExpiresAt': 'token_expires_at',
+            'tokenLastRefreshed': 'token_last_refreshed',
+            'isActive': 'is_active',
+            'createdAt': 'created_at',
+            'updatedAt': 'updated_at'
+        }
+        
+        # Create a new dict with model field names
+        model_data = {}
+        for db_field, model_field in field_mapping.items():
+            if db_field in item:
+                model_data[model_field] = item[db_field]
+        
+        # Handle datetime fields
+        datetime_fields = ['token_expires_at', 'token_last_refreshed', 'created_at', 'updated_at']
+        for field in datetime_fields:
+            if field in model_data:
+                model_data[field] = cls._parse_datetime(model_data[field])
+        
+        # Handle boolean field
+        if 'is_active' in model_data and not isinstance(model_data['is_active'], bool):
+            model_data['is_active'] = str(model_data['is_active']).lower() == 'true'
+
+        return cls(**model_data)
 
     @staticmethod
     def _parse_datetime(dt_str: Optional[str]) -> datetime:
