@@ -1,11 +1,14 @@
 from typing import Any, Dict
 
+from personalize_commons.constants.app_constants import AppConstants
+
+
 class WhatsAppTemplateHelper:
 
     def build_template_variables(self, whatsapp_config: dict, row: Dict[str, Any]) -> Dict[str, Any]:
         # Sort template variables by placeholder number (1, 2, 3…)
         sorted_vars = sorted(
-            whatsapp_config["template_variables"].items(),
+            whatsapp_config[AppConstants.TEMPLATE_VARIABLES].items(),
             key=lambda x: int(x[0])
         )
 
