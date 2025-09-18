@@ -55,3 +55,7 @@ class AppConstants:
     DESCRIPTION='description'
     TYPE='type'
     NAME='name'
+    RECIPIENT_COLUMN='recipient_column_name'
+    IS_NUMBER_TYPE_VARIABLE='is_number_type_variable'
+    TEMPLATE_NAME='template_name'
+    TEMPLATE_VARIABLES='template_variables'
