@@ -69,7 +69,7 @@ class CampaignEntity(BaseModel):
                 "industry_type": "E-commerce",
                 "target_segment": {"conditions": {"age": {"operator": ">", "value": 18}}},
                 "message_template": "Hello {name}, check out our sale!",
-                "whatsapp_config": "{'recipient_column_name':mobile_number, is_number_type_variable:false ,template_name:'welcome',template_variables:{ 1:'user.name' } or template_variables:{ name:'user.name' }  }",
+                "whatsapp_config": "{'recipient_column_name':mobile_number, ,template_name:'welcome',template_variables:{ 1:'user.name' ,2:'user.age'}   }",
                 "tenant_id": "tenant123",
                 "status": "DRAFT",
                 "created_at": "2023-01-01T00:00:00.000Z",
