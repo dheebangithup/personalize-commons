@@ -34,7 +34,7 @@ class CampaignEntity(BaseModel):
     industry_type: str = Field(..., max_length=100)
     target_segment: Optional[Dict[str, Any]] = Field(..., description="Serialized QueryRequest")
     message_template: dict[str, Any]
-    whatsapp_config: Optional[dict[str, Any]]
+    whatsapp_config: Optional[dict[str, Any]]=Field(default=None, description="WhatsApp Config")
     tenant_id: str
     item_id: Optional[str] = None
     logic:Optional[str]=None
