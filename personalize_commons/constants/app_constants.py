@@ -58,3 +58,4 @@ class AppConstants:
     RECIPIENT_COLUMN='recipient_column_name'
     TEMPLATE_NAME='template_name'
     TEMPLATE_VARIABLES='template_variables'
+    LANGUAGE_CODE='language_code'
