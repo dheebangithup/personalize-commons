@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
 from personalize_commons.utils.datetime_utils import ist_now_iso, ist_now
+from personalize_commons.utils.security_util import SecurityUtil
 
 '''
 PK :tenant_id
@@ -127,7 +128,7 @@ class RecommendationEntity(BaseModel):
         #     item[DBConstants.COMPLETED_AT] = to_ist_iso(item[DBConstants.COMPLETED_AT])
 
         if 'recom_file_key' in item and item['recom_file_key'] is not None:
-            item['recom_file_key'] =  base64.urlsafe_b64encode(str(item['recom_file_key']).encode())
+            item['recom_file_key'] = SecurityUtil.encode_b64(str(item['recom_file_key']))
         # Convert ISO format strings back to datetime objects
         for field in ['created_at', 'updated_at', 'completed_at']:
             if field in item and item[field] is not None and isinstance(item[field], str):
