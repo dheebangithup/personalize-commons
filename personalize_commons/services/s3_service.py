@@ -142,9 +142,6 @@ class S3Service:
     def upload_jsonl_with_key(
             self,
             data: List[Dict[str, Any]],
-            tenant_id: str,
-            recommendation_id: str,
-            campaign_id: str,
             s3_key: str,
     ) -> str:
         """
@@ -152,9 +149,7 @@ class S3Service:
 
         Args:
             data: List of dictionaries to be saved as JSONL
-            tenant_id: Tenant identifier
-            recommendation_id: Recommendation identifier
-            filename: Optional custom filename (without extension)
+            s3_key: S3 key
 
         Returns:
             str: S3 URL of the uploaded file
@@ -162,9 +157,7 @@ class S3Service:
         Raises:
             ClientError: If upload to S3 fails
             :param data:
-            :param tenant_id:
-            :param recommendation_id:
-            :param campaign_id:
+            :param s3_key
         """
         try:
             # Convert data to JSONL format
