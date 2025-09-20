@@ -127,8 +127,8 @@ class RecommendationEntity(BaseModel):
         # if DBConstants.COMPLETED_AT in item and item[DBConstants.COMPLETED_AT]:
         #     item[DBConstants.COMPLETED_AT] = to_ist_iso(item[DBConstants.COMPLETED_AT])
 
-        # if 'recom_file_key' in item and item['recom_file_key'] is not None:
-        #     item['recom_file_key'] = SecurityUtil.encode_b64(str(item['recom_file_key']))
+        if 'recom_file_key' in item and item['recom_file_key'] is not None:
+            item['recom_file_key'] = SecurityUtil.encode_b64(str(item['recom_file_key']))
         # Convert ISO format strings back to datetime objects
         for field in ['created_at', 'updated_at', 'completed_at']:
             if field in item and item[field] is not None and isinstance(item[field], str):
