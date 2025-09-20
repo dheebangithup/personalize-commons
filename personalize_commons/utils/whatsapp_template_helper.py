@@ -5,7 +5,8 @@ from personalize_commons.constants.app_constants import AppConstants
 
 class WhatsAppTemplateHelper:
 
-    def build_template_variables(self, whatsapp_config: dict, row: Dict[str, Any]) -> Dict[str, Any]:
+    @staticmethod
+    def build_template_variables( whatsapp_config: dict, row: Dict[str, Any]) -> Dict[str, Any]:
         # Sort template variables by placeholder number (1, 2, 3…)
         sorted_vars = sorted(
             whatsapp_config[AppConstants.TEMPLATE_VARIABLES].items(),
@@ -19,7 +20,8 @@ class WhatsAppTemplateHelper:
 
         return resolved
 
-    def validate_template_variables(self,template_vars: dict, schema: dict) -> dict:
+    @staticmethod
+    def validate_template_variables(template_vars: dict, schema: dict) -> dict:
         """
         Validates WhatsApp template variables against schema.
 
