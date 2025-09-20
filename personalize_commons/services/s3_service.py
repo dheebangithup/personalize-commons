@@ -13,6 +13,9 @@ import uuid
 import base64
 import math
 
+from personalize_commons.utils.datetime_utils import ist_now
+
+
 def safe_json_serializer(obj):
     if isinstance(obj, Decimal):
         return float(obj)
@@ -62,9 +65,32 @@ class S3Service:
         Returns:
             str: S3 key for the JSONL file
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = ist_now().strftime("%Y%m%d_%H%M%S")
         filename = f"{recommendation_id}_{timestamp}.jsonl"
         return f"recommendations/{tenant_id}/{campaign_id}/{filename}"
+
+    def get_s3_job_key(self, tenant_id: str, campaign_id: str, recommendation_id: str,job_id) -> str:
+
+        """
+        Generate an S3 key for a recommendation JSONL file.
+
+        s3 path like: recommendations/
+                          /tenant_id/
+                          /campaign_id/
+                          /recommendation_id/
+                          /filename.jsonl
+        Args:
+            tenant_id: Tenant identifier
+            recommendation_id: Recommendation identifier
+            campaign_id: Campaign identifier
+            job_id: Job identifier
+
+        Returns:
+            str: S3 key for the JSONL file
+        """
+        timestamp = ist_now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{job_id}_{timestamp}.jsonl"
+        return f"recommendations/{tenant_id}/{campaign_id}/{recommendation_id}/{filename}"
 
     def upload_jsonl(
             self,
@@ -98,6 +124,51 @@ class S3Service:
 
             # Generate S3 key
             s3_key = self._get_s3_key(tenant_id, recommendation_id, campaign_id)
+
+            # Upload to S3
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Body=jsonl_content,
+                ContentType='application/jsonl'
+            )
+
+            # Generate and return the S3 URL
+            return s3_key
+
+        except ClientError as e:
+            raise S3UploadException(f"Failed to upload to S3: {str(e)}")
+
+    def upload_jsonl_with_key(
+            self,
+            data: List[Dict[str, Any]],
+            tenant_id: str,
+            recommendation_id: str,
+            campaign_id: str,
+            s3_key: str,
+    ) -> str:
+        """
+        Upload data as JSONL to S3.
+
+        Args:
+            data: List of dictionaries to be saved as JSONL
+            tenant_id: Tenant identifier
+            recommendation_id: Recommendation identifier
+            filename: Optional custom filename (without extension)
+
+        Returns:
+            str: S3 URL of the uploaded file
+
+        Raises:
+            ClientError: If upload to S3 fails
+            :param data:
+            :param tenant_id:
+            :param recommendation_id:
+            :param campaign_id:
+        """
+        try:
+            # Convert data to JSONL format
+            jsonl_content = "\n".join(json.dumps(item,default=safe_json_serializer) for item in data)
 
             # Upload to S3
             self.s3_client.put_object(
