@@ -6,6 +6,7 @@ class RabbitMQConstants:
     RECOMMENDATION_DLQ = "recommendations.dlq"
     NOTIFICATION_DLQ = "notifications.dlq"
     RECOMMENDATION_START_ROUTING_KEY = 'recommendation.start'
+    NOTIFICATION_START_ROUTING_KEY = 'notifications.start'
     RECOMMENDATION_DLQ_ROUTING_KEY = "recommendation.dlq"
 
     class Payload:
