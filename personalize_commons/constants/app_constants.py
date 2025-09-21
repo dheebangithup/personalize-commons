@@ -1,4 +1,5 @@
 class AppConstants:
+    RECOMMENDATION_ID = 'recommendation_id'
     STRING = 'string'
     VALUE = 'value'
     OPERATOR = 'operator'
