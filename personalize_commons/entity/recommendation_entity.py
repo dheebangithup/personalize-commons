@@ -27,10 +27,11 @@ class RecommendationStatus(str, Enum):
 
 class Flow(str, Enum):
     RECOMMENDATION_TRIGGERED = "recommendation.triggered"
+    NOTIFICATION_TRIGGERED = "recommendation.notification.triggered"
     AI_SUCCESS = "recommendation.ai.success"
     AI_FAILED = "recommendation.ai.failed"
-    NOTIFY_SUCCESS = "recommendation.notify.success"
-    NOTIFY_FAILED = "recommendation.notify.failed"
+    NOTIFY_SUCCESS = "recommendation.notification.success"
+    NOTIFY_FAILED = "recommendation.notification.failed"
 
 
 
