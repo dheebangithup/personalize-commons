@@ -32,6 +32,11 @@ class WhatsAppTemplateHelper:
         Returns:
             dict with validation results
         """
+        if not template_vars:
+            return {
+                "is_valid": True,
+                'errors': [],
+            }
         errors = {}
         for var_key, var_value in template_vars.items():
             # Must contain "."
