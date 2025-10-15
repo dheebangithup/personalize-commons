@@ -47,7 +47,7 @@ class WhatsAppTemplateHelper:
             entity, field = var_value.split(".", 1)
 
             # Validate entity
-            if entity not in schema:
+            if entity not in schema[AppConstants.TENANT_FIELDS]:
                 errors[var_key] = f"Invalid entity: '{entity}'"
                 continue
 
