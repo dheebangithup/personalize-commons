@@ -7,6 +7,8 @@ from typing import Optional, Dict, Any
 from personalize_commons.utils.datetime_utils import ist_now
 from pydantic import BaseModel, Field
 
+from personalize_commons.utils.security_util import SecurityUtil
+
 
 class JobStatus(str, Enum):
     PARTIALLY_COMPLETED = 'PARTIALLY_COMPLETED'
@@ -107,10 +109,7 @@ class WhatsAppJob(BaseModel):
         # Convert DynamoDB format to our model
         if 'status' in item and item['status']:
             item['status'] = JobStatus(item['status'])
-        # if DBConstants.CREATED_AT in item and item[DBConstants.CREATED_AT]:
-        #     item[DBConstants.CREATED_AT] = to_ist_iso( item[DBConstants.CREATED_AT])
-        #
-        # if DBConstants.UPDATED_AT in item and item[DBConstants.UPDATED_AT]:
-        #     item[DBConstants.UPDATED_AT] = to_ist_iso(item[DBConstants.UPDATED_AT])
+        if 'report_s3_key' in item and item['report_s3_key'] is not None:
+            item['report_s3_key'] = SecurityUtil.encode_b64(str(item['report_s3_key']))
 
         return cls(**item)
