@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Optional, Dict, Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 from personalize_commons.constants.db_constants import DBConstants
 from personalize_commons.entity.campaign_entity import CampaignEntity
@@ -95,6 +95,16 @@ class RecommendationEntity(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+
+    @field_serializer("recom_file_key")
+    def serialize_recom_file_key(self, recom_file_key: str | None) -> str | None:
+        if recom_file_key is None:
+            return None
+
+        if not recom_file_key.startswith("recommendations/"):
+            return SecurityUtil.decode_b64(recom_file_key)
+
+        return recom_file_key
 
     def to_dynamodb_item(self) -> Dict[str, Any]:
         """Convert the entity to a DynamoDB item."""
