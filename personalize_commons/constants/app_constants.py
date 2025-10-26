@@ -62,5 +62,5 @@ class AppConstants:
     LANGUAGE_CODE='language_code'
     WHATSAPP_HEADER='header'
     WHATSAPP_HEADER_FILE_NAME='header_file_name'
-    WHATSAPP_HEADER_FILE_TYPE='header_file_type'
+    WHATSAPP_HEADER_FILE_URL='header_file_url'
     WHATSAPP_HEADER_TYPE='header_type'
