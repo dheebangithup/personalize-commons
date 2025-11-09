@@ -10,6 +10,7 @@ from personalize_commons.repositories.user_repository import UserRepository
 from personalize_commons.dependencies.aws_providers import get_dynamodb_resource, get_dynamodb_client
 from personalize_commons.repositories.whatsapp_account_repository import WhatsAppAccountRepository
 from personalize_commons.repositories.whatsapp_job_repository import WhatsAppJobRepository
+from personalize_commons.repositories.media_file_repository import MediaFileRepository
 
 # Create singleton instances
 __user_repository = None
@@ -20,6 +21,7 @@ __tenant_repository = None
 __interaction_repository = None
 __whatsapp_account_repository = None
 __whatsapp_job_repository = None
+__media_file_repository = None
 
 
 def get_tenant_repository():
@@ -70,3 +72,9 @@ def get_whatsapp_job_repository():
     if __whatsapp_job_repository is None:
         __whatsapp_job_repository=WhatsAppJobRepository(resource=get_dynamodb_resource())
     return __whatsapp_job_repository
+
+def get_media_file_repository():
+    global __media_file_repository
+    if __media_file_repository is None:
+        __media_file_repository = MediaFileRepository(resource=get_dynamodb_resource())
+    return __media_file_repository
