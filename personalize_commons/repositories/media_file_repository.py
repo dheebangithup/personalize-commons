@@ -147,7 +147,7 @@ class MediaFileRepository:
         self,
         tenant_id: str,
         folder: Optional[str] = None,
-        channel: Optional[str] = None,
+        tag: Optional[str] = None,
         file_type: Optional[str] = None,
         is_temp: Optional[bool] = None,
         search_query: Optional[str] = None,
@@ -160,7 +160,7 @@ class MediaFileRepository:
         Args:
             tenant_id: The tenant identifier
             folder: Optional folder filter
-            channel: Optional channel filter
+            tag: Optional tag filter
             file_type: Optional type filter
             is_temp: Optional temp filter
             search_query: Optional search query (searches in file_name)
@@ -177,8 +177,8 @@ class MediaFileRepository:
 
             if folder:
                 conditions.append(Attr('folder').eq(folder))
-            if channel:
-                conditions.append(Attr('channel').eq(channel))
+            if tag:
+                conditions.append(Attr('tag').eq(tag))
             if file_type:
                 conditions.append(Attr('type').eq(file_type))
             if is_temp is not None:

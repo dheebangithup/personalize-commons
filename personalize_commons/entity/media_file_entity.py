@@ -2,7 +2,28 @@
 MediaFileEntity for storing file metadata in DynamoDB
 PK: tenant_id
 SK: file_key (full R2 key including folder path)
-LSI: FolderIndex (folder), TypeIndex (type), ChannelIndex (channel), IsTempIndex (is_temp)
+LSI: FolderIndex (folder), TypeIndex (type), TagIndex (tag), IsTempIndex (is_temp)
+
+AWS CLI Command (Alternative):
+------------------------------
+aws dynamodb create-table \
+    --table-name media_library \
+    --attribute-definitions \
+        AttributeName=tenant_id,AttributeType=S \
+        AttributeName=file_key,AttributeType=S \
+        AttributeName=folder,AttributeType=S \
+        AttributeName=type,AttributeType=S \
+        AttributeName=tag,AttributeType=S \
+        AttributeName=is_temp,AttributeType=N \
+    --key-schema \
+        AttributeName=tenant_id,KeyType=HASH \
+        AttributeName=file_key,KeyType=RANGE \
+    --local-secondary-indexes \
+        'IndexName=FolderIndex,KeySchema=[{AttributeName=tenant_id,KeyType=HASH},{AttributeName=folder,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+        'IndexName=TypeIndex,KeySchema=[{AttributeName=tenant_id,KeyType=HASH},{AttributeName=type,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+        'IndexName=TagIndex,KeySchema=[{AttributeName=tenant_id,KeyType=HASH},{AttributeName=tag,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+        'IndexName=IsTempIndex,KeySchema=[{AttributeName=tenant_id,KeyType=HASH},{AttributeName=is_temp,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+    --billing-mode PAY_PER_REQUEST
 """
 from datetime import datetime
 from typing import Optional, Dict, Any
@@ -31,7 +52,7 @@ class MediaFileEntity(BaseModel):
     
     # Metadata
     folder: Optional[str] = Field(None, description="Folder/path within tenant (e.g., 'Festival_Offers')")
-    channel: Optional[str] = Field(None, description="Channel: whatsapp, instagram, both")
+    tag: Optional[str] = Field(None, description="Custom tag for categorization (free-form text)")
     type: Optional[str] = Field(None, description="File type: image, video, document")
     is_temp: bool = Field(default=False, description="Whether file is temporary")
     uploaded_by: Optional[str] = Field(None, description="User ID who uploaded the file")
