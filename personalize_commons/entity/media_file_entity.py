@@ -79,6 +79,11 @@ class MediaFileEntity(BaseModel):
                 if not isinstance(item[field], str):
                     item[field] = item[field].isoformat()
         
+        # Convert bool is_temp to number (0 or 1) for DynamoDB index compatibility
+        # IsTempIndex expects Number (N) type
+        if 'is_temp' in item and isinstance(item['is_temp'], bool):
+            item['is_temp'] = 1 if item['is_temp'] else 0
+        
         return item
 
     @classmethod
@@ -88,6 +93,15 @@ class MediaFileEntity(BaseModel):
         for field in ['created_at', 'updated_at']:
             if field in item and item[field] is not None and isinstance(item[field], str):
                 item[field] = datetime.fromisoformat(item[field])
+        
+        # Convert number is_temp back to bool (handles both number 0/1 and bool values)
+        # IsTempIndex stores as Number (N) in DynamoDB
+        if 'is_temp' in item:
+            if isinstance(item['is_temp'], (int, float)):
+                item['is_temp'] = bool(item['is_temp'])
+            elif isinstance(item['is_temp'], str):
+                # Handle string "true"/"false" or "0"/"1" for backward compatibility
+                item['is_temp'] = item['is_temp'].lower() == 'true' or item['is_temp'] == '1'
         
         return cls(**item)
 

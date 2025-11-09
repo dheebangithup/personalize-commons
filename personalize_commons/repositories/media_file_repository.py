@@ -182,7 +182,9 @@ class MediaFileRepository:
             if file_type:
                 conditions.append(Attr('type').eq(file_type))
             if is_temp is not None:
-                conditions.append(Attr('is_temp').eq(is_temp))
+                # Convert bool to number for DynamoDB query (is_temp is stored as Number in index)
+                is_temp_value = 1 if is_temp else 0
+                conditions.append(Attr('is_temp').eq(is_temp_value))
             if search_query:
                 # Search in file_name (case-insensitive)
                 conditions.append(Attr('file_name').contains(search_query.lower()))
@@ -248,12 +250,12 @@ class MediaFileRepository:
 
             for item in response.get('Items', []):
                 size = item.get('file_size', 0)
-                is_temp = item.get('is_temp', False)
+                is_temp = item.get('is_temp', 0)  # Stored as number (0 or 1) in DynamoDB
                 
                 total_size += size
                 file_count += 1
                 
-                if is_temp:
+                if is_temp == 1 or is_temp is True:  # Handle both number and bool
                     temp_size += size
                     temp_count += 1
 
@@ -268,12 +270,12 @@ class MediaFileRepository:
                 
                 for item in response.get('Items', []):
                     size = item.get('file_size', 0)
-                    is_temp = item.get('is_temp', False)
+                    is_temp = item.get('is_temp', 0)  # Stored as number (0 or 1) in DynamoDB
                     
                     total_size += size
                     file_count += 1
                     
-                    if is_temp:
+                    if is_temp == 1 or is_temp is True:  # Handle both number and bool
                         temp_size += size
                         temp_count += 1
                 
@@ -305,9 +307,10 @@ class MediaFileRepository:
             deleted_keys = []
 
             # Query all temp files for tenant
+            # Note: is_temp is stored as Number (1 for true, 0 for false) in DynamoDB index
             response = self.table.query(
                 KeyConditionExpression=Key('tenant_id').eq(tenant_id),
-                FilterExpression=Attr('is_temp').eq(True),
+                FilterExpression=Attr('is_temp').eq(1),
                 ProjectionExpression='file_key'
             )
 
@@ -327,7 +330,7 @@ class MediaFileRepository:
             while last_key:
                 response = self.table.query(
                     KeyConditionExpression=Key('tenant_id').eq(tenant_id),
-                    FilterExpression=Attr('is_temp').eq(True),
+                    FilterExpression=Attr('is_temp').eq(1),  # Number 1 for true
                     ProjectionExpression='file_key',
                     ExclusiveStartKey=last_key
                 )
