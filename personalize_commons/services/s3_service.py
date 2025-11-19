@@ -53,8 +53,8 @@ class S3Service:
             bucket_name: Name of the S3 bucket. If not provided, will use S3_BUCKET from environment.
         """
         self.bucket_name = os.getenv('AWS_S3_BUCKET_NAME')
-        if not self.bucket_name:
-            raise ValueError("S3_BUCKET environment variable must be set")
+        # if not self.bucket_name:
+        #     raise ValueError("S3_BUCKET environment variable must be set")
 
         self.s3_client = client
 
