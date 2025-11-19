@@ -327,6 +327,35 @@ class S3Service:
         except Exception as e:
             raise S3UploadException(f"Failed to prepare or upload data: {str(e)}")
 
+    def _strip_gz_extension(self, path: str) -> str:
+        """
+        Strip .gz extension from path if present.
+
+        Args:
+            path: File path or S3 key
+
+        Returns:
+            str: Path without .gz extension
+        """
+        if path.endswith('.gz'):
+            return path[:-3]
+        return path
+
+    def _add_gz_extension_if_needed(self, path: str, enable_gzip: bool) -> str:
+        """
+        Add .gz extension to path if gzip is enabled and not already present.
+
+        Args:
+            path: File path or S3 key
+            enable_gzip: Whether gzip compression is enabled
+
+        Returns:
+            str: Path with .gz extension if needed
+        """
+        if enable_gzip and not path.endswith('.gz'):
+            return f"{path}.gz"
+        return path
+
     def _prepare_upload_data(
             self,
             data: Union[List[Dict[str, Any]], Dict[str, Any], 'pd.DataFrame', str, bytes, Path],
@@ -341,6 +370,9 @@ class S3Service:
         Returns:
             tuple: (body_bytes, content_type, final_s3_path)
         """
+        # Strip .gz from s3_path for format detection (we'll add it back if needed)
+        s3_path_clean = self._strip_gz_extension(s3_path)
+
         # Handle file path input
         if isinstance(data, (str, Path)):
             path = Path(data)
@@ -350,10 +382,12 @@ class S3Service:
                 # Infer content type from file extension if not provided
                 if not content_type:
                     content_type = self._infer_content_type_from_path(path)
-                final_s3_path = s3_path
+                final_s3_path = s3_path_clean
                 # Apply gzip compression if enabled
                 if enable_gzip:
                     body_bytes = self._compress_gzip(body_bytes)
+                # Add .gz extension if gzip is enabled
+                final_s3_path = self._add_gz_extension_if_needed(final_s3_path, enable_gzip)
             else:
                 raise FileNotFoundError(f"File not found: {data}")
             return body_bytes, content_type, final_s3_path
@@ -362,10 +396,12 @@ class S3Service:
         if isinstance(data, (bytes, bytearray)):
             body_bytes = bytes(data)
             if not content_type:
-                content_type = self._infer_content_type_from_path(s3_path) or 'application/octet-stream'
-            final_s3_path = s3_path
+                content_type = self._infer_content_type_from_path(s3_path_clean) or 'application/octet-stream'
+            final_s3_path = s3_path_clean
             if enable_gzip:
                 body_bytes = self._compress_gzip(body_bytes)
+            # Add .gz extension if gzip is enabled
+            final_s3_path = self._add_gz_extension_if_needed(final_s3_path, enable_gzip)
             return body_bytes, content_type, final_s3_path
 
         # Handle pandas DataFrame
@@ -383,7 +419,7 @@ class S3Service:
                 body_str = "\n".join(jsonl_lines)
                 body_bytes = body_str.encode('utf-8')
                 final_content_type = content_type or 'application/jsonl'
-                final_s3_path = s3_path if s3_path.endswith('.jsonl') else f"{s3_path}.jsonl"
+                final_s3_path = s3_path_clean if s3_path_clean.endswith('.jsonl') else f"{s3_path_clean}.jsonl"
 
             elif format_type == 'csv':
                 # Convert DataFrame to CSV
@@ -391,7 +427,7 @@ class S3Service:
                 data.to_csv(csv_buffer, index=include_index)
                 body_bytes = csv_buffer.getvalue().encode('utf-8')
                 final_content_type = content_type or 'text/csv'
-                final_s3_path = s3_path if s3_path.endswith('.csv') else f"{s3_path}.csv"
+                final_s3_path = s3_path_clean if s3_path_clean.endswith('.csv') else f"{s3_path_clean}.csv"
 
             elif format_type == 'parquet':
                 # Convert DataFrame to Parquet (requires pyarrow or fastparquet)
@@ -399,20 +435,23 @@ class S3Service:
                 data.to_parquet(parquet_buffer, index=include_index, engine=kwargs.get('engine', 'pyarrow'))
                 body_bytes = parquet_buffer.getvalue()
                 final_content_type = content_type or 'application/parquet'
-                final_s3_path = s3_path if s3_path.endswith('.parquet') else f"{s3_path}.parquet"
+                final_s3_path = s3_path_clean if s3_path_clean.endswith('.parquet') else f"{s3_path_clean}.parquet"
 
             elif format_type == 'json':
                 # Convert DataFrame to JSON
                 json_str = data.to_json(orient=orient, date_format='iso', default_handler=safe_json_serializer)
                 body_bytes = json_str.encode('utf-8')
                 final_content_type = content_type or 'application/json'
-                final_s3_path = s3_path if s3_path.endswith('.json') else f"{s3_path}.json"
+                final_s3_path = s3_path_clean if s3_path_clean.endswith('.json') else f"{s3_path_clean}.json"
 
             else:
                 raise ValueError(f"Unsupported format for DataFrame: {format_type}. Use 'jsonl', 'csv', 'parquet', or 'json'")
 
             if enable_gzip:
                 body_bytes = self._compress_gzip(body_bytes)
+
+            # Add .gz extension if gzip is enabled
+            final_s3_path = self._add_gz_extension_if_needed(final_s3_path, enable_gzip)
 
             return body_bytes, final_content_type, final_s3_path
 
@@ -422,7 +461,7 @@ class S3Service:
             json_str = json.dumps(data, default=safe_json_serializer)
             body_bytes = json_str.encode('utf-8')
             final_content_type = content_type or 'application/json'
-            final_s3_path = s3_path if s3_path.endswith('.json') else f"{s3_path}.json"
+            final_s3_path = s3_path_clean if s3_path_clean.endswith('.json') else f"{s3_path_clean}.json"
 
         elif isinstance(data, list):
             # List - check if it's a list of dicts
@@ -430,14 +469,14 @@ class S3Service:
                 # Empty list - create empty JSONL
                 body_bytes = b''
                 final_content_type = content_type or 'application/jsonl'
-                final_s3_path = s3_path if s3_path.endswith('.jsonl') else f"{s3_path}.jsonl"
+                final_s3_path = s3_path_clean if s3_path_clean.endswith('.jsonl') else f"{s3_path_clean}.jsonl"
             elif isinstance(data[0], dict):
                 # List of dicts - convert to JSONL
                 jsonl_lines = [json.dumps(item, default=safe_json_serializer) for item in data]
                 body_str = "\n".join(jsonl_lines)
                 body_bytes = body_str.encode('utf-8')
                 final_content_type = content_type or 'application/jsonl'
-                final_s3_path = s3_path if s3_path.endswith('.jsonl') else f"{s3_path}.jsonl"
+                final_s3_path = s3_path_clean if s3_path_clean.endswith('.jsonl') else f"{s3_path_clean}.jsonl"
             else:
                 raise ValueError(
                     f"List must contain dictionaries. Got list of {type(data[0])}"
@@ -451,6 +490,9 @@ class S3Service:
 
         if enable_gzip:
             body_bytes = self._compress_gzip(body_bytes)
+
+        # Add .gz extension if gzip is enabled
+        final_s3_path = self._add_gz_extension_if_needed(final_s3_path, enable_gzip)
 
         return body_bytes, final_content_type, final_s3_path
 
