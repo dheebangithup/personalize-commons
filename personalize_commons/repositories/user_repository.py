@@ -66,9 +66,12 @@ class UserRepository:
             QueryResponse containing the list of users and count
         """
         try:
+            # NOTE: In DynamoDB PartiQL, identifiers (table names, attribute names) that are 
+            # reserved words (e.g., "name", "status", "location") MUST be double-quoted.
+            # We quote them by default to ensure robustness.
             query = f"""
-                SELECT * FROM {self.table_name} 
-                WHERE tenant_id = ?
+                SELECT * FROM "{self.table_name}" 
+                WHERE "tenant_id" = ?
             """
             
             # Convert tenant_id to DynamoDB type format
@@ -186,12 +189,18 @@ class UserRepository:
                 return f"({formatted_list})"
 
             if dtype in ("string",):
-                return f"'{value}'"
+                # NOTE: Values in PartiQL use single quotes. If a value contains a single quote 
+                # (e.g., "O'Brian"), it must be escaped by doubling it (''O''''Brian'').
+                escaped_value = str(value).replace("'", "''")
+                return f"'{escaped_value}'"
             elif dtype in ("int", "integer"):
                 return str(int(value))
             elif dtype in ("float", "double"):
-                # avoid unnecessary .0 for integers
-                return str(int(value)) if float(value).is_integer() else str(float(value))
+                # avoid unnecessary .0 for integers to keep PartiQL happy
+                val = float(value)
+                return str(int(val)) if val.is_integer() else str(val)
+            elif dtype in ("bool", "boolean"):
+                return "TRUE" if bool(value) else "FALSE"
             else:
                 raise ValueError(f"Unsupported dtype: {dtype}")
 
@@ -221,10 +230,12 @@ class UserRepository:
                 value = rule["value"]
                 dtype = rule["dtype"]
 
+                # NOTE: We double-quote field names by default to handle DynamoDB reserved 
+                # keywords like "name", "role", "status", "location", etc.
                 if operator == "IN":
-                    return f"{field} IN {typecast_value(value, dtype)}"
+                    return f"\"{field}\" IN {typecast_value(value, dtype)}"
                 else:
-                    return f"{field} {operator} {typecast_value(value, dtype)}"
+                    return f"\"{field}\" {operator} {typecast_value(value, dtype)}"
 
         return process_rule(rules)
 
@@ -233,7 +244,10 @@ class UserRepository:
         Build and execute a PartiQL query from nested filter rules JSON.
         """
         where_clause = self._build_partiql_query(rules)
-        statement = f"SELECT * FROM {self.table_name} WHERE tenant_id = '{tenant_id}' AND {where_clause}"
+        # NOTE: Table names and reserved words should be double-quoted.
+        # Values like tenant_id use single quotes and must be escaped if they contain single quotes.
+        escaped_tenant_id = str(tenant_id).replace("'", "''")
+        statement = f"SELECT * FROM \"{self.table_name}\" WHERE \"tenant_id\" = '{escaped_tenant_id}' AND {where_clause}"
         logger.info(f"Generated PartiQL: {statement}")
         items = self.execute_partiql(statement)
         return QueryResponse(users=items, count=len(items))
